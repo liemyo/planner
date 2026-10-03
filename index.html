@@ -50,6 +50,8 @@ main{max-width:1100px;margin:0 auto;padding:16px 16px 90px}
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .filters input{flex:1 1 180px}
 .qa-wrap[hidden]{display:none}
+.fab{position:fixed;right:20px;bottom:calc(24px + env(safe-area-inset-bottom));z-index:31;width:56px;height:56px;border-radius:50%;border:0;background:var(--acc);color:#fff;font-size:30px;line-height:1;display:grid;place-items:center;cursor:pointer;opacity:.7;box-shadow:0 8px 22px rgba(0,0,0,.3);transition:opacity .15s,transform .15s}
+.fab:hover,.fab:active{opacity:1;transform:scale(1.05)}
 .hb-tog{margin:-4px 0 8px}
 .hb-tog .et{width:100%;height:22px;display:flex;align-items:center;gap:10px;background:none;border:0;padding:0;margin:0;color:var(--muted);font-size:17px;line-height:1;cursor:pointer}
 .hb-tog .et::before,.hb-tog .et::after{content:'';flex:1;height:1px;background:color-mix(in srgb,var(--text) 16%,transparent)}
@@ -203,6 +205,7 @@ dialog::backdrop{background:rgba(10,12,20,.45)}
   .day .ev{display:none}
   .two{grid-template-columns:1fr}
   .toast{bottom:84px}
+  .fab{right:14px;bottom:calc(80px + env(safe-area-inset-bottom))}
   /* compact quick-add / filters / groups (phone) — inputs stay 16px so iOS doesn't zoom */
   .qa{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:8px;margin-bottom:8px}
   .qa #qa-title{grid-column:1/3;grid-row:1}.qa .btn.primary{grid-column:3;grid-row:1;padding:0;font-size:20px}
@@ -233,7 +236,7 @@ dialog::backdrop{background:rgba(10,12,20,.45)}
 <dialog id="dlg"></dialog>
 <noscript>Planner memerlukan JavaScript.</noscript>
 <script>// Planner — to-do, kalender, catatan penting. Data per nama pengguna di Supabase (proyek saku-yuk), sinkron real time.
-const BUILD = '20261003-222858';
+const BUILD = '20261003-223515';
 const SB_URL = 'https://bbptcxpzzvgpxqylkrmw.supabase.co', SB_KEY = 'sb_publishable_Ny-WHCEZ3WmcLFsPBx9QeQ_9xgo7MxR'; // public key; tables closed, only pl_* functions
 const ADMIN = 'admin';
 
@@ -471,7 +474,8 @@ function render() {
       <div class="top-r"><span class="sync">${syncText()}</span><button class="chip" data-a="menu">${S.admin ? '🛡 Admin' : '👤 ' + esc(S.user)} ▾</button></div>
     </div></header>
     <main>${remindersView()}${(views[S.view] || todoView)()}</main>
-    <nav class="bnav" style="--n:${tabs.length}">${tabs.map(([v, l, i]) => `<button class="${S.view === v ? 'on' : ''}" data-a="view" data-v="${v}"><b>${i}</b>${l}</button>`).join('')}</nav>`;
+    <nav class="bnav" style="--n:${tabs.length}">${tabs.map(([v, l, i]) => `<button class="${S.view === v ? 'on' : ''}" data-a="view" data-v="${v}"><b>${i}</b>${l}</button>`).join('')}</nav>
+    ${RO() ? '' : '<button type="button" class="fab" data-a="newtodo" title="To-do baru" aria-label="Buat to-do baru">＋</button>'}`;
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (sel) try { el.setSelectionRange(...sel); } catch {} } }
   window.scrollTo(0, y);
 }
@@ -510,7 +514,7 @@ function todoView() {
   const stat = (g, l) => `<button class="stat ${g} ${S.f.stat === g ? 'sel' : ''}" data-a="stat" data-v="${g}"><b>${cnt(g)}</b><span>${l}</span></button>`;
   return `<div class="head"><div><div class="muted small">${longD(now)} · <span id="clock">${pad(now.getHours())}:${pad(now.getMinutes())}</span></div><h1>${S.admin ? 'Semua to-do pengguna' : 'To-do list'}</h1></div>${ownerFilter()}</div>
     <div class="stats">${stat('late', 'Terlambat')}${stat('today', 'Hari ini')}${stat('week', '7 hari ke depan')}${stat('done', 'Selesai')}</div>
-    <div class="qa-wrap"${LS.get('qa') === 'hide' ? ' hidden' : ''}>${RO() ? '' : `<form class="card qa" id="qa-form" autocomplete="off"><input id="qa-title" placeholder="Tambah to-do… (Enter)" value="${esc(S.qa.title)}" maxlength="200">
+    <div class="qa-wrap"${!S.qaOpen ? ' hidden' : ''}>${RO() ? '' : `<form class="card qa" id="qa-form" autocomplete="off"><input id="qa-title" placeholder="Tambah to-do… (Enter)" value="${esc(S.qa.title)}" maxlength="200">
       <input id="qa-date" type="date" value="${esc(S.qa.date)}" title="Tanggal">
       <select id="qa-prio" title="Kepentingan">${Object.entries(PRIO).map(([k, [l]]) => `<option value="${k}"${S.qa.prio === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
       <button class="btn primary" type="submit" title="Tambah">＋<span class="lbl"> Tambah</span></button><button class="btn" type="button" data-a="newtodo">Detail…</button></form>`}
@@ -518,7 +522,7 @@ function todoView() {
       <select id="f-prio" data-f="prio"><option value="">Kepentingan</option>${Object.entries(PRIO).map(([k, [l]]) => `<option value="${k}"${S.f.prio === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
       ${cats.length ? `<select id="f-cat" data-f="cat"><option value="">Semua kategori</option>${cats.map(c => `<option${S.f.cat === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>` : ''}
       ${S.f.stat || S.f.q || S.f.prio || S.f.cat ? '<button class="btn" data-a="clearf">Reset filter</button>' : ''}</div></div>
-    <div class="hb-tog"><button type="button" class="et" data-a="qatog" aria-expanded="${LS.get('qa') !== 'hide'}" title="${LS.get('qa') === 'hide' ? 'Tampilkan tambah & cari' : 'Sembunyikan tambah & cari'}">${LS.get('qa') === 'hide' ? '⌄' : '⌃'}</button></div>
+    <div class="hb-tog"><button type="button" class="et" data-a="qatog" aria-expanded="${!!S.qaOpen}" title="${!S.qaOpen ? 'Tampilkan tambah & cari' : 'Sembunyikan tambah & cari'}">${!S.qaOpen ? '⌄' : '⌃'}</button></div>
     ${groups.map(([g, label, ic]) => {
       const rows = list.filter(t => groupOf(t) === g).sort(g === 'done' ? (a, b) => (b.data.doneAt || 0) - (a.data.doneAt || 0) : byDate);
       if (!rows.length && (g === 'done' || g === 'nodate' || g === 'later')) return '';
@@ -526,7 +530,7 @@ function todoView() {
       return `<details class="card grp ${g}${rows.length ? '' : ' zero'}" data-g="g-${g}"${open ? ' open' : ''}><summary>${ic} ${label} <span class="cnt">${rows.length}</span></summary>
         <div class="${RO() ? 'ro' : ''}">${rows.length ? thead() + rows.slice(0, g === 'done' ? 100 : 500).map(todoRow).join('') : `<div class="empty">${g === 'late' ? 'Tidak ada yang terlambat 👍' : 'Kosong.'}</div>`}</div></details>`;
     }).join('')}
-    ${!all.length ? `<p class="muted" style="text-align:center;margin-top:24px">${S.admin ? 'Belum ada to-do dari pengguna mana pun.' : 'Belum ada to-do. Ketik di kolom di atas lalu tekan Enter.'}</p>` : ''}`;
+    ${!all.length ? `<p class="muted" style="text-align:center;margin-top:24px">${S.admin ? 'Belum ada to-do dari pengguna mana pun.' : 'Belum ada to-do. Tekan ＋ di kanan bawah untuk membuat to-do baru.'}</p>` : ''}`;
 }
 
 function dayInfo(ds, todos, notes) {
@@ -720,7 +724,7 @@ const A = {
   logout: () => logout(),
   stat: el => { S.f.stat = S.f.stat === el.dataset.v ? '' : el.dataset.v; render(); },
   qatog: el => { // hide / show quick-add + search (remembered per device)
-    const hide = LS.get('qa') !== 'hide'; hide ? LS.set('qa', 'hide') : LS.del('qa');
+    const hide = !!S.qaOpen; S.qaOpen = !hide; // starts hidden every time Planner opens
     $('.qa-wrap').hidden = hide; el.textContent = hide ? '⌄' : '⌃'; el.title = hide ? 'Tampilkan tambah & cari' : 'Sembunyikan tambah & cari'; el.setAttribute('aria-expanded', String(!hide));
   },
   clearf: () => { S.f.q = S.f.prio = S.f.cat = S.f.stat = ''; render(); },
