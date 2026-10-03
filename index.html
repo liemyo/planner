@@ -205,7 +205,7 @@ dialog::backdrop{background:rgba(10,12,20,.45)}
 <dialog id="dlg"></dialog>
 <noscript>Planner memerlukan JavaScript.</noscript>
 <script>// Planner — to-do, kalender, catatan penting. Data per nama pengguna di Supabase (proyek saku-yuk), sinkron real time.
-const BUILD = '20261003-181454';
+const BUILD = '20261003-182222';
 const SB_URL = 'https://bbptcxpzzvgpxqylkrmw.supabase.co', SB_KEY = 'sb_publishable_Ny-WHCEZ3WmcLFsPBx9QeQ_9xgo7MxR'; // public key; tables closed, only pl_* functions
 const ADMIN = 'admin';
 
@@ -670,7 +670,6 @@ const A = {
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-a]'); if (!el || !A[el.dataset.a]) return;
   if (el.closest('summary') && el.dataset.a !== 'toggle') return;
-  if (el.tagName === 'BUTTON' && el.type === 'submit') return;
   ev.preventDefault(); ev.stopPropagation(); A[el.dataset.a](el);
 });
 document.addEventListener('toggle', ev => {
