@@ -196,8 +196,24 @@ dialog::backdrop{background:rgba(10,12,20,.45)}
   .day .ev{display:none}
   .two{grid-template-columns:1fr}
   .toast{bottom:84px}
+  /* compact quick-add / filters / groups (phone) — inputs stay 16px so iOS doesn't zoom */
+  .qa{display:grid;grid-template-columns:1.25fr 1fr minmax(70px,auto);gap:6px;padding:8px;margin-bottom:8px}
+  .qa #qa-title{grid-column:1/3;grid-row:1}.qa .btn.primary{grid-column:3;grid-row:1;padding:0;font-size:20px}
+  .qa #qa-date{grid-column:1;grid-row:2}.qa #qa-prio{grid-column:2;grid-row:2}.qa [data-a=newtodo]{grid-column:3;grid-row:2}
+  .qa .lbl{display:none}
+  .qa input,.qa select,.qa .btn,.filters input,.filters select,.filters .btn{height:38px;padding:5px 8px;border-radius:9px;min-width:0;width:100%}
+  .qa .btn,.filters .btn{font-size:14px}
+  .filters{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+  .filters .btn{grid-column:1/-1}
+  details.grp{margin-bottom:6px;border-radius:12px}
+  details.grp>summary{padding:8px 12px;font-size:14.5px;gap:6px}
+  details.grp>summary::after{font-size:17px}
+  .empty{padding:8px 12px;font-size:13px}
+  .grp.zero .empty{display:none}
+  .grp.zero>summary{pointer-events:none;color:var(--muted)}
+  .grp.zero>summary::after{visibility:hidden}
 }
-@media (max-width:420px){.grid7{gap:3px}.day{min-height:44px;border-radius:8px}.qa #qa-date{flex:1 1 130px}.qa #qa-prio{flex:0 0 100px}.qa .btn{flex:1}}
+@media (max-width:420px){.grid7{gap:3px}.day{min-height:44px;border-radius:8px}}
 </style>
 </head>
 <body>
@@ -205,7 +221,7 @@ dialog::backdrop{background:rgba(10,12,20,.45)}
 <dialog id="dlg"></dialog>
 <noscript>Planner memerlukan JavaScript.</noscript>
 <script>// Planner — to-do, kalender, catatan penting. Data per nama pengguna di Supabase (proyek saku-yuk), sinkron real time.
-const BUILD = '20261003-183407';
+const BUILD = '20261003-212819';
 const SB_URL = 'https://bbptcxpzzvgpxqylkrmw.supabase.co', SB_KEY = 'sb_publishable_Ny-WHCEZ3WmcLFsPBx9QeQ_9xgo7MxR'; // public key; tables closed, only pl_* functions
 const ADMIN = 'admin';
 
@@ -485,16 +501,16 @@ function todoView() {
     ${RO() ? '' : `<form class="card qa" id="qa-form" autocomplete="off"><input id="qa-title" placeholder="Tambah to-do… (Enter)" value="${esc(S.qa.title)}" maxlength="200">
       <input id="qa-date" type="date" value="${esc(S.qa.date)}" title="Tanggal">
       <select id="qa-prio" title="Kepentingan">${Object.entries(PRIO).map(([k, [l]]) => `<option value="${k}"${S.qa.prio === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
-      <button class="btn primary" type="submit">＋ Tambah</button><button class="btn" type="button" data-a="newtodo">Detail…</button></form>`}
+      <button class="btn primary" type="submit" title="Tambah">＋<span class="lbl"> Tambah</span></button><button class="btn" type="button" data-a="newtodo">Detail…</button></form>`}
     <div class="filters"><input id="f-q" data-f="q" type="search" placeholder="🔍 Cari to-do…" value="${esc(S.f.q)}">
-      <select id="f-prio" data-f="prio"><option value="">Semua kepentingan</option>${Object.entries(PRIO).map(([k, [l]]) => `<option value="${k}"${S.f.prio === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
+      <select id="f-prio" data-f="prio"><option value="">Kepentingan</option>${Object.entries(PRIO).map(([k, [l]]) => `<option value="${k}"${S.f.prio === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
       ${cats.length ? `<select id="f-cat" data-f="cat"><option value="">Semua kategori</option>${cats.map(c => `<option${S.f.cat === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>` : ''}
       ${S.f.stat || S.f.q || S.f.prio || S.f.cat ? '<button class="btn" data-a="clearf">Reset filter</button>' : ''}</div>
     ${groups.map(([g, label, ic]) => {
       const rows = list.filter(t => groupOf(t) === g).sort(g === 'done' ? (a, b) => (b.data.doneAt || 0) - (a.data.doneAt || 0) : byDate);
       if (!rows.length && (g === 'done' || g === 'nodate' || g === 'later')) return '';
       const open = S.open['g-' + g] ?? (g !== 'done');
-      return `<details class="card grp ${g}" data-g="g-${g}"${open ? ' open' : ''}><summary>${ic} ${label} <span class="cnt">${rows.length}</span></summary>
+      return `<details class="card grp ${g}${rows.length ? '' : ' zero'}" data-g="g-${g}"${open ? ' open' : ''}><summary>${ic} ${label} <span class="cnt">${rows.length}</span></summary>
         <div class="${RO() ? 'ro' : ''}">${rows.length ? thead() + rows.slice(0, g === 'done' ? 100 : 500).map(todoRow).join('') : `<div class="empty">${g === 'late' ? 'Tidak ada yang terlambat 👍' : 'Kosong.'}</div>`}</div></details>`;
     }).join('')}
     ${!all.length ? `<p class="muted" style="text-align:center;margin-top:24px">${S.admin ? 'Belum ada to-do dari pengguna mana pun.' : 'Belum ada to-do. Ketik di kolom di atas lalu tekan Enter.'}</p>` : ''}`;
