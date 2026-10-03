@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Planner</title>
+<meta name="description" content="Planner: to-do list dengan tanggal, sisa hari dan tingkat kepentingan, kalender rencana, dan catatan penting dengan pengingat — sinkron real time di HP dan laptop.">
+<meta name="theme-color" content="#4f5bd5">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%234f5bd5'/><path d='M28 52l14 14 30-32' fill='none' stroke='white' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<style>:root{--bg:#f4f5f8;--card:#fff;--soft:#eef0f5;--line:#e1e4ec;--text:#14171f;--muted:#5a6273;--acc:#4f5bd5;--acc2:#7c5cf0;--high:#e5484d;--high-bg:#fde8e8;--mid:#d98a00;--mid-bg:#fff2d6;--low:#2f9e6b;--low-bg:#dff5ea;--done:#8a93a6;--shadow:0 1px 2px rgba(20,23,31,.05),0 6px 20px rgba(20,23,31,.05);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1117;--card:#181b24;--soft:#20242f;--line:#2a2f3c;--text:#f2f4f8;--muted:#a3abbd;--acc:#8b95ff;--acc2:#a78bfa;--high:#ff6b70;--high-bg:#3a1a1d;--mid:#ffb02e;--mid-bg:#3a2c10;--low:#4cc38a;--low-bg:#15301f;--done:#7d8598;--shadow:none;color-scheme:dark}}
+:root[data-theme=dark]{--bg:#0f1117;--card:#181b24;--soft:#20242f;--line:#2a2f3c;--text:#f2f4f8;--muted:#a3abbd;--acc:#8b95ff;--acc2:#a78bfa;--high:#ff6b70;--high-bg:#3a1a1d;--mid:#ffb02e;--mid-bg:#3a2c10;--low:#4cc38a;--low-bg:#15301f;--done:#7d8598;--shadow:none;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 11px;min-width:0;color:var(--text)}
+input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--acc) 45%,transparent);border-color:var(--acc)}
+textarea{resize:vertical;width:100%}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 13px;cursor:pointer;white-space:nowrap;font-weight:500}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.danger{color:var(--high)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.muted{color:var(--muted)}.small{font-size:13px}
+.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.top-in{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:17px}
+.logo{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-size:16px}
+.tabs{display:flex;gap:4px;margin-left:12px}
+.tab{border:0;background:none;padding:8px 12px;border-radius:9px;cursor:pointer;color:var(--muted);font-weight:600}
+.tab.on{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+.top-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+.sync{font-size:12px;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:99px;padding:5px 11px;cursor:pointer;font-weight:600;font-size:13px}
+main{max-width:1100px;margin:0 auto;padding:16px 16px 90px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:4px 0 14px}
+.head h1{margin:0;font-size:22px;letter-spacing:-.01em}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 13px;cursor:pointer;box-shadow:var(--shadow);text-align:left}
+.stat b{display:block;font-size:22px;line-height:1.1}
+.stat span{font-size:12.5px;color:var(--muted);font-weight:600}
+.stat.late b{color:var(--high)}.stat.today b{color:var(--mid)}.stat.week b{color:var(--acc)}.stat.done b{color:var(--low)}
+.stat.sel{outline:2px solid var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.qa{display:flex;gap:8px;padding:10px;margin-bottom:12px;flex-wrap:wrap}
+.qa #qa-title{flex:1 1 220px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.filters input{flex:1 1 180px}
+details.grp{margin-bottom:10px;overflow:hidden}
+details.grp>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:11px 14px;font-weight:700;user-select:none}
+details.grp>summary::-webkit-details-marker{display:none}
+details.grp>summary::after{content:'›';margin-left:auto;font-size:20px;line-height:1;color:var(--muted);transition:transform .15s}
+details.grp[open]>summary::after{transform:rotate(90deg)}
+.cnt{background:var(--soft);color:var(--muted);border-radius:99px;padding:1px 8px;font-size:12px;font-weight:700}
+.grp.late>summary .cnt{background:var(--high-bg);color:var(--high)}
+.thead,.row{display:grid;grid-template-columns:30px 1fr 150px 120px 90px;gap:10px;align-items:center;padding:9px 14px}
+.thead{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;border-top:1px solid var(--line);padding-top:7px;padding-bottom:7px}
+.row{border-top:1px solid var(--line);cursor:pointer}
+.row:hover{background:var(--soft)}
+.ro .thead,.ro .row{grid-template-columns:1fr 150px 120px 90px}
+.chk{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);background:none;cursor:pointer;display:grid;place-items:center;color:#fff;font-size:13px;font-weight:800;padding:0}
+.chk:hover{border-color:var(--low)}
+.chk.on{background:var(--low);border-color:var(--low)}
+.r-title{font-weight:600;overflow-wrap:anywhere}
+.is-done .r-title{text-decoration:line-through;color:var(--done)}
+.r-meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:2px}
+.r-meta:empty{display:none}
+.tag{color:var(--acc);font-weight:600}
+.who{font-weight:700;color:var(--acc2)}
+.r-date{font-size:13.5px}
+.pill,.prio{display:inline-block;border-radius:99px;padding:2px 9px;font-size:12px;font-weight:700;white-space:nowrap}
+.pill.late{background:var(--high-bg);color:var(--high)}.pill.today{background:var(--mid-bg);color:var(--mid)}.pill.soon{background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}.pill.far,.pill.none{background:var(--soft);color:var(--muted)}.pill.ok{background:var(--low-bg);color:var(--low)}
+.prio::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:5px;vertical-align:1px}
+.prio.high{background:var(--high-bg);color:var(--high)}.prio.mid{background:var(--mid-bg);color:var(--mid)}.prio.low{background:var(--low-bg);color:var(--low)}
+.empty{padding:14px;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
+/* calendar */
+.cal-wrap{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;align-items:start}
+.cal{padding:12px}
+.cal-h{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cal-h h2{margin:0;font-size:18px;flex:1}
+.grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.dow{text-align:center;font-size:11.5px;font-weight:700;color:var(--muted);padding:3px 0}
+.day{min-height:78px;border-radius:10px;border:1px solid var(--line);padding:5px 6px;cursor:pointer;background:var(--card);text-align:left;display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.day:hover{border-color:var(--acc)}
+.day .n{font-weight:700;font-size:13px}
+.day.out{opacity:.4}
+.day.today .n{background:var(--acc);color:#fff;border-radius:99px;width:22px;height:22px;display:grid;place-items:center;margin:-2px 0 0 -3px}
+.day.sel{outline:2px solid var(--acc);outline-offset:1px}
+.day.p-high{background:var(--high-bg);border-color:color-mix(in srgb,var(--high) 40%,transparent)}
+.day.p-mid{background:var(--mid-bg);border-color:color-mix(in srgb,var(--mid) 40%,transparent)}
+.day.p-low{background:var(--low-bg);border-color:color-mix(in srgb,var(--low) 40%,transparent)}
+.day.p-done{background:var(--soft)}
+.day.p-note{border-color:var(--acc2)}
+.ev{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.ev.dn{text-decoration:line-through;color:var(--done)}
+.dots{display:flex;gap:3px;margin-top:auto}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.dot.high{background:var(--high)}.dot.mid{background:var(--mid)}.dot.low{background:var(--low)}.dot.note{background:var(--acc2)}.dot.done{background:var(--done)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.side-h{display:flex;align-items:center;gap:8px;padding:12px 14px;flex-wrap:wrap}
+.side-h h3{margin:0;font-size:16px;flex:1}
+.side .row{grid-template-columns:30px 1fr 90px}
+.side .row .r-date,.side .thead{display:none}
+.side.ro .row{grid-template-columns:1fr 90px}
+.side .row .r-prio{display:none}
+/* notes */
+.note{border-left:5px solid var(--c,var(--acc))}
+.note>summary{padding:11px 14px;font-weight:600}
+.note .nb{padding:0 14px 12px;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text)}
+.nmeta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted);font-weight:500}
+.nact{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 12px}
+.notes-list{display:flex;flex-direction:column;gap:8px;padding:0 10px 10px}
+.notes-list details.note{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--c,var(--acc));border-radius:10px}
+.notes-list details.note>summary{list-style:none;cursor:pointer;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.notes-list details.note>summary::-webkit-details-marker{display:none}
+.notes-list details.note>summary::after{content:'›';margin-left:auto;color:var(--muted);font-size:18px;transition:transform .15s}
+.notes-list details.note[open]>summary::after{transform:rotate(90deg)}
+.bell{display:inline-block;border-radius:99px;padding:1px 8px;font-size:11.5px;font-weight:700;background:color-mix(in srgb,var(--acc2) 15%,transparent);color:var(--acc2)}
+.bell.past{background:var(--soft);color:var(--muted)}
+/* reminders banner */
+.rem{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border-radius:14px;padding:10px 14px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px}
+.rem-i{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rem-i b{flex:1;min-width:150px}
+.rem .btn{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3);color:#fff}
+/* dialog */
+dialog{border:0;border-radius:18px;padding:0;width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 24px);background:var(--card);color:var(--text);box-shadow:0 30px 80px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(10,12,20,.45)}
+.dlg{padding:18px;display:flex;flex-direction:column;gap:12px}
+.dlg h2{margin:0;font-size:18px}
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld>span{font-size:12.5px;font-weight:700;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg label{flex:1;min-width:80px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label span{display:block;text-align:center;border:1px solid var(--line);border-radius:10px;padding:8px;cursor:pointer;font-weight:600}
+.seg input:checked+span.high{background:var(--high-bg);color:var(--high);border-color:var(--high)}
+.seg input:checked+span.mid{background:var(--mid-bg);color:var(--mid);border-color:var(--mid)}
+.seg input:checked+span.low{background:var(--low-bg);color:var(--low);border-color:var(--low)}
+.subs{display:flex;flex-direction:column;gap:6px}
+.sub{display:flex;gap:8px;align-items:center}
+.sub input[type=text]{flex:1}
+.sub .x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px}
+.swatch{display:flex;gap:8px}
+.swatch label input{position:absolute;opacity:0}
+.swatch label span{display:block;width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent}
+.swatch label input:checked+span{border-color:var(--text)}
+.dlg-f{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.dlg-f .sp{flex:1}
+.check{display:flex;align-items:center;gap:8px;font-weight:600}
+.check input{width:18px;height:18px}
+.toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:14px;font-weight:600;z-index:50;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.users{width:100%;border-collapse:collapse}
+.users th,.users td{padding:9px 12px;border-top:1px solid var(--line);text-align:left;font-size:14px}
+.users th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.users tr.click{cursor:pointer}.users tr.click:hover td{background:var(--soft)}
+.num{text-align:right!important}
+.bnav{display:none}
+/* gate */
+.gate{position:fixed;inset:0;display:grid;place-items:center;padding:16px;background:radial-gradient(1100px 700px at 10% 0%,#6d5cf0 0%,transparent 60%),radial-gradient(900px 600px at 100% 100%,#2f7ad8 0%,transparent 55%),linear-gradient(160deg,#171a3a,#0d1424)}
+.gate-card{width:min(380px,100%);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border-radius:24px;padding:34px 26px 24px;text-align:center;color:#fff;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+.gate .logo{width:68px;height:68px;border-radius:20px;font-size:34px;margin:0 auto 12px}
+.gate h1{margin:0;font-size:27px}
+.gate-sub{margin:4px 0 22px;color:rgba(255,255,255,.75)}
+.gate-field{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.22);border-radius:14px;padding:4px 14px;text-align:left;margin-bottom:10px}
+.gate-field:focus-within{border-color:#a99bff;box-shadow:0 0 0 3px rgba(169,155,255,.3)}
+.gate-field input{flex:1;background:none;border:0;outline:0;color:#fff;font-size:16px;padding:10px 0}
+.gate-field input::placeholder{color:rgba(255,255,255,.6)}
+.mask-wrap{position:relative;flex:1;display:block;min-width:0}
+.mask-wrap input,#user-mask{font:500 17px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em;padding:10px 0}
+.mask-wrap input{width:100%;-webkit-text-fill-color:transparent;color:transparent;caret-color:#fff}
+.mask-wrap input::placeholder{-webkit-text-fill-color:rgba(255,255,255,.6);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:0}
+#user-mask{position:absolute;inset:0;pointer-events:none;color:#fff;white-space:pre;overflow:hidden}
+.gate-btn{width:100%;margin-top:4px;padding:12px;font-size:16px;font-weight:700;border-radius:14px;background:linear-gradient(135deg,#8b7bff,#5a63e6);border:0;color:#fff;cursor:pointer}
+.gate-btn:disabled{opacity:.7}
+.gate-err{color:#ffc2c2;min-height:18px;margin-top:10px;font-size:14px}
+.gate-note{color:rgba(255,255,255,.65);font-size:12.5px;margin:6px 0 0;line-height:1.5}
+.gate .check{justify-content:center;color:rgba(255,255,255,.85);font-weight:500;font-size:14px;margin:4px 0 10px}
+@media (max-width:820px){
+  .tabs,.top .sync{display:none}
+  .bnav{display:grid;grid-template-columns:repeat(var(--n,3),1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+  .bnav button{border:0;background:none;padding:6px 2px;border-radius:10px;font-size:11.5px;font-weight:700;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+  .bnav button b{font-size:19px;font-weight:400;line-height:1}
+  .bnav button.on{color:var(--acc);background:var(--soft)}
+  .stats{gap:6px}.stat{padding:8px 8px;border-radius:12px}.stat b{font-size:19px}.stat span{font-size:11px;line-height:1.2;display:block}
+  .cal-wrap{grid-template-columns:1fr}
+  .thead{display:none}
+  .row,.ro .row{grid-template-columns:30px 1fr auto;grid-template-areas:"c t p" "c d l";row-gap:4px;column-gap:10px}
+  .ro .row{grid-template-columns:1fr auto;grid-template-areas:"t p" "d l"}
+  .row .chk{grid-area:c;align-self:start;margin-top:1px}.row .r-main{grid-area:t}.row .r-date{grid-area:d;font-size:12.5px;color:var(--muted)}.row .r-left{grid-area:l;justify-self:end}.row .r-prio{grid-area:p;justify-self:end;align-self:start}
+  .side .row{grid-template-columns:30px 1fr auto;grid-template-areas:"c t l"}
+  .side.ro .row{grid-template-columns:1fr auto;grid-template-areas:"t l"}
+  .day{min-height:50px;padding:4px}
+  .day .ev{display:none}
+  .two{grid-template-columns:1fr}
+  .toast{bottom:84px}
+}
+@media (max-width:420px){.grid7{gap:3px}.day{min-height:44px;border-radius:8px}.qa #qa-date{flex:1 1 130px}.qa #qa-prio{flex:0 0 100px}.qa .btn{flex:1}}
+</style>
+</head>
+<body>
+<div id="app"><div style="padding:40px;font-family:sans-serif;color:#888">Memuat Planner…</div></div>
+<dialog id="dlg"></dialog>
+<noscript>Planner memerlukan JavaScript.</noscript>
+<script>// Planner — to-do, kalender, catatan penting. Data per nama pengguna di Supabase (proyek saku-yuk), sinkron real time.
+const BUILD = '20261003-181454';
+const SB_URL = 'https://bbptcxpzzvgpxqylkrmw.supabase.co', SB_KEY = 'sb_publishable_Ny-WHCEZ3WmcLFsPBx9QeQ_9xgo7MxR'; // public key; tables closed, only pl_* functions
+const ADMIN = 'admin';
+
+// ---------- helpers ----------
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const LS = {
+  get: k => { try { return localStorage.getItem('planner.' + k); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem('planner.' + k, v); } catch {} },
+  del: k => { try { localStorage.removeItem('planner.' + k); } catch {} }
+};
+const SS = { get: k => { try { return sessionStorage.getItem('planner.' + k); } catch { return null; } }, set: (k, v) => { try { sessionStorage.setItem('planner.' + k, v); } catch {} }, del: k => { try { sessionStorage.removeItem('planner.' + k); } catch {} } };
+const uid = () => { const a = crypto.getRandomValues(new Uint8Array(12)); return [...a].map(x => x.toString(36).padStart(2, '0')).join('').slice(0, 20); };
+const normUser = s => String(s ?? '').trim().toLowerCase();
+const validUser = s => /^[a-z0-9._-]{3,32}$/.test(s);
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseD = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const addD = (d, n) => { d = new Date(d); d.setDate(d.getDate() + n); return d; };
+const diffDays = s => Math.round((parseD(s) - today()) / 864e5);
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const DS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+const fmtD = s => { const d = parseD(s); return `${DS[d.getDay()]}, ${d.getDate()} ${MON[d.getMonth()]}${d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : ''}`; };
+const longD = d => `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+const fmtDT = s => { const d = new Date(s); return `${fmtD(ymd(d))} · ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const hms = d => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+const PRIO = { high: ['Tinggi', 3], mid: ['Sedang', 2], low: ['Rendah', 1] };
+const REP = { none: 'Tidak berulang', daily: 'Harian', weekly: 'Mingguan', monthly: 'Bulanan', yearly: 'Tahunan' };
+const COLORS = ['#4f5bd5', '#e5484d', '#d98a00', '#2f9e6b', '#7c5cf0', '#0e9bb5', '#d6409f'];
+const GROUPS = [['late', 'Terlambat', '⚠️'], ['today', 'Hari ini', '📌'], ['week', '7 hari ke depan', '🗓️'], ['later', 'Nanti', '⏳'], ['nodate', 'Tanpa tanggal', '📝'], ['done', 'Selesai', '✅']];
+
+// ---------- state ----------
+const S = {
+  user: null, admin: false, pass: '', users: [],
+  items: new Map(), seq: 0, queue: new Set(),
+  view: 'todo', cal: { month: new Date(today().getFullYear(), today().getMonth(), 1), sel: ymd(today()) },
+  f: { q: '', prio: '', cat: '', owner: '', stat: '' }, nq: '',
+  qa: { title: '', date: ymd(today()), prio: 'mid' },
+  open: JSON.parse(LS.get('open') || '{}'), openNotes: new Set(),
+  sync: { busy: false, again: false, at: null, err: '' }, edit: null, day: ymd(today())
+};
+const RO = () => S.admin;
+const key = it => it.owner + '/' + it.id;
+const live = kind => [...S.items.values()].filter(i => !i.deleted && i.kind === kind && (!S.admin || !S.f.owner || i.owner === S.f.owner));
+const cacheKey = () => S.admin ? 'admin' : 'u.' + S.user;
+
+function saveCache() {
+  LS.set(cacheKey() + '.items', JSON.stringify([...S.items.values()]));
+  LS.set(cacheKey() + '.seq', String(S.seq));
+  if (!S.admin) LS.set(cacheKey() + '.queue', JSON.stringify([...S.queue]));
+}
+function loadCache() {
+  S.items = new Map(); S.queue = new Set(); S.seq = 0;
+  try { for (const it of JSON.parse(LS.get(cacheKey() + '.items') || '[]')) S.items.set(key(it), it); } catch {}
+  S.seq = Number(LS.get(cacheKey() + '.seq') || 0);
+  if (!S.admin) try { S.queue = new Set(JSON.parse(LS.get(cacheKey() + '.queue') || '[]')); } catch {}
+  if (S.admin) try { S.users = JSON.parse(LS.get('admin.users') || '[]'); } catch {}
+}
+
+// ---------- data changes ----------
+function put(it) { // local write → queue → push
+  const prev = S.items.get(key(it));
+  it.updated = Math.max(Date.now(), (prev?.updated || 0) + 1);
+  S.items.set(key(it), it); S.queue.add(key(it)); saveCache(); render(); pushSoon();
+}
+function newItem(kind, data) { return { id: uid(), owner: S.user, kind, data: { created: Date.now(), ...data }, updated: 0, deleted: false }; }
+function nextDate(s, rep) {
+  const d = parseD(s);
+  if (rep === 'daily') d.setDate(d.getDate() + 1);
+  else if (rep === 'weekly') d.setDate(d.getDate() + 7);
+  else if (rep === 'monthly') { const day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + 1); d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate())); }
+  else if (rep === 'yearly') d.setFullYear(d.getFullYear() + 1);
+  return ymd(d);
+}
+function toggleTodo(k) {
+  const t = S.items.get(k); if (!t || RO()) return;
+  const d = { ...t.data, done: !t.data.done, doneAt: !t.data.done ? Date.now() : null };
+  if (d.done && d.repeat && d.repeat !== 'none' && d.date && !d.spawned) { // repeating: make the next one
+    d.spawned = true;
+    put(newItem('todo', { ...t.data, date: nextDate(t.data.date, d.repeat), done: false, doneAt: null, spawned: false, ack: null, snooze: null, subs: (t.data.subs || []).map(s => ({ ...s, d: false })) }));
+    toast(`Selesai ✓ — berikutnya ${fmtD(nextDate(t.data.date, d.repeat))}`);
+  } else if (d.done) toast('Ditandai selesai ✓');
+  put({ ...t, data: d });
+}
+
+// ---------- server ----------
+async function rpc(fn, args) { // retries: some networks drop connections
+  for (let i = 0; ; i++) {
+    try {
+      const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, { method: 'POST', cache: 'no-store', headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(args) });
+      if (!r.ok) { const e = new Error('server ' + r.status); e.server = true; throw e; }
+      const t = await r.text(); return t ? JSON.parse(t) : null;
+    } catch (e) { if (i >= 4 || e.server) throw navigator.onLine ? e : new Error('offline'); await new Promise(r => setTimeout(r, 300 * (i + 1))); }
+  }
+}
+let pushTimer = null;
+function pushSoon() { clearTimeout(pushTimer); pushTimer = setTimeout(syncNow, 250); showSync(); }
+async function syncNow() {
+  if (!S.user && !S.admin) return;
+  if (S.sync.busy) { S.sync.again = true; return; }
+  S.sync.busy = true; showSync(); let changed = false; const who = cacheKey();
+  try {
+    if (!S.admin && S.queue.size) {
+      const keys = [...S.queue], sent = keys.map(k => S.items.get(k)).filter(Boolean);
+      const snap = new Map(sent.map(i => [key(i), i.updated]));
+      for (let i = 0; i < sent.length; i += 200)
+        await rpc('pl_put', { p_owner: S.user, p_items: sent.slice(i, i + 200).map(({ id, kind, data, updated, deleted }) => ({ id, kind, data, updated, deleted })) });
+      for (const k of keys) if (S.items.get(k)?.updated === snap.get(k)) S.queue.delete(k);
+      saveCache(); ping();
+    }
+    let rows;
+    if (S.admin) {
+      const r = await rpc('pl_admin', { p_pass: S.pass, p_after: S.seq });
+      if (!r?.ok) { logout(); return; }
+      S.users = r.users || []; LS.set('admin.users', JSON.stringify(S.users)); rows = r.rows || [];
+    } else rows = (await rpc('pl_list', { p_owner: S.user, p_after: S.seq })) || [];
+    if (who !== cacheKey()) return;
+    for (const r of rows) {
+      const it = { id: r.id, owner: r.owner || S.user, kind: r.kind, data: r.data || {}, updated: Number(r.updated), deleted: !!r.deleted };
+      const cur = S.items.get(key(it));
+      if (!cur || (it.updated >= cur.updated && !S.queue.has(key(it)))) {
+        if (!cur || JSON.stringify(cur) !== JSON.stringify(it)) changed = true;
+        S.items.set(key(it), it);
+      }
+      S.seq = Math.max(S.seq, Number(r.seq));
+    }
+    if (changed || rows.length) saveCache();
+    S.sync.at = new Date(); S.sync.err = '';
+  } catch (e) { S.sync.err = e?.message === 'offline' ? 'offline — tersimpan di perangkat ini' : (e?.message || String(e)); }
+  finally { S.sync.busy = false; }
+  if (S.sync.again) { S.sync.again = false; return syncNow(); }
+  if (changed) render(); else showSync();
+}
+// realtime: supabase broadcast pings (no data inside), plus a 10 s check
+let sb = null, chans = [];
+async function liveStart() {
+  try {
+    if (!window.supabase) await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+    sb ||= window.supabase.createClient(SB_URL, SB_KEY);
+    liveStop();
+    const all = sb.channel('planner-all');
+    if (S.admin) all.on('broadcast', { event: 'chg' }, () => syncNow());
+    chans.push(all.subscribe());
+    if (!S.admin) chans.push(sb.channel('planner-u-' + S.user).on('broadcast', { event: 'chg' }, () => syncNow()).subscribe());
+  } catch {}
+}
+function liveStop() { if (sb) chans.forEach(c => sb.removeChannel(c)); chans = []; }
+function ping() { for (const c of chans) try { c.send({ type: 'broadcast', event: 'chg', payload: { t: Date.now() } }); } catch {} }
+const syncText = () => S.sync.err ? '⚠ ' + S.sync.err : S.sync.busy || S.queue.size ? '⏳ Menyinkronkan…' : S.sync.at ? '☁ Tersinkron ' + hms(S.sync.at) : '☁ Menghubungkan…';
+function showSync() { document.querySelectorAll('.sync').forEach(e => { e.textContent = syncText(); }); }
+
+// ---------- login ----------
+async function login(raw, pass, remember) {
+  const name = normUser(raw);
+  if (!validUser(name)) throw new Error('Nama pengguna 3–32 karakter: huruf, angka, titik, garis bawah, atau tanda minus.');
+  if (name === ADMIN) {
+    if (!pass) throw new Error('Masukkan password Admin.');
+    const r = await rpc('pl_admin', { p_pass: pass, p_after: 0 }).catch(e => { throw new Error('Tidak bisa menghubungi server (' + e.message + ').'); });
+    if (!r?.ok) throw new Error(r?.locked ? 'Terlalu banyak percobaan salah. Coba lagi 15 menit lagi.' : 'Password Admin salah.');
+    S.admin = true; S.user = null; S.pass = pass; S.f.owner = '';
+    loadCache(); S.items = new Map(); S.seq = 0; // fresh full copy
+    S.users = r.users || [];
+    for (const x of r.rows || []) { const it = { id: x.id, owner: x.owner, kind: x.kind, data: x.data || {}, updated: Number(x.updated), deleted: !!x.deleted }; S.items.set(key(it), it); S.seq = Math.max(S.seq, Number(x.seq)); }
+    saveCache(); LS.set('admin.users', JSON.stringify(S.users)); S.sync.at = new Date();
+    SS.set('admin', pass); if (remember) LS.set('session', JSON.stringify({ admin: true })); else LS.del('session');
+  } else {
+    S.admin = false; S.user = name; S.pass = '';
+    loadCache();
+    if (remember) LS.set('session', JSON.stringify({ user: name })); else { LS.del('session'); SS.set('user', name); }
+    rpc('pl_hello', { p_owner: name }).catch(() => {});
+    setTimeout(syncNow, 0);
+  }
+  S.view = 'todo'; S.f.stat = '';
+  liveStart();
+}
+function logout() {
+  liveStop(); LS.del('session'); SS.del('admin'); SS.del('user');
+  S.user = null; S.admin = false; S.pass = ''; S.items = new Map(); S.queue = new Set(); S.seq = 0; S.sync = { busy: false, again: false, at: null, err: '' };
+  if (dlg().open) dlg().close(); render();
+}
+
+// ---------- reminders ----------
+const remAt = it => it.data.snooze || (it.kind === 'note' ? it.data.remind : (it.data.date && it.data.time ? it.data.date + 'T' + it.data.time : null)) || null;
+function dueReminders() {
+  if (RO()) return [];
+  const now = Date.now();
+  return [...S.items.values()].filter(it => !it.deleted && !it.data.done && remAt(it) && new Date(remAt(it)).getTime() <= now && it.data.ack !== remAt(it))
+    .sort((a, b) => remAt(a).localeCompare(remAt(b)));
+}
+function notifyCheck() {
+  const due = dueReminders(); let seen = {}; try { seen = JSON.parse(LS.get('notified') || '{}'); } catch {}
+  let fresh = false;
+  for (const it of due) {
+    const k = key(it) + '@' + remAt(it); if (seen[k]) continue; seen[k] = 1; fresh = true;
+    try { if ('Notification' in window && Notification.permission === 'granted') new Notification(it.kind === 'note' ? '🔔 Catatan penting' : '🔔 To-do', { body: it.data.title || '(tanpa judul)', tag: k }); } catch {}
+  }
+  if (fresh) { LS.set('notified', JSON.stringify(seen)); render(); }
+}
+
+// ---------- views ----------
+function render() {
+  const app = $('#app');
+  const ae = document.activeElement, focusId = ae && app.contains(ae) ? ae.id : null, sel = focusId && 'selectionStart' in ae ? [ae.selectionStart, ae.selectionEnd] : null;
+  const y = window.scrollY;
+  if (!S.user && !S.admin) { app.innerHTML = gateView(); syncMask(); setTimeout(() => $('#user-in')?.focus(), 30); return; }
+  const views = { todo: todoView, cal: calView, notes: notesView, users: usersView };
+  const tabs = [['todo', 'To-do', '✓'], ['cal', 'Kalender', '📅'], ['notes', 'Catatan', '🗒'], ...(S.admin ? [['users', 'Pengguna', '👥']] : [])];
+  app.innerHTML = `<header class="top"><div class="top-in">
+      <div class="brand"><span class="logo">✓</span>Planner</div>
+      <nav class="tabs">${tabs.map(([v, l]) => `<button class="tab ${S.view === v ? 'on' : ''}" data-a="view" data-v="${v}">${l}</button>`).join('')}</nav>
+      <div class="top-r"><span class="sync">${syncText()}</span><button class="chip" data-a="menu">${S.admin ? '🛡 Admin' : '👤 ' + esc(S.user)} ▾</button></div>
+    </div></header>
+    <main>${remindersView()}${(views[S.view] || todoView)()}</main>
+    <nav class="bnav" style="--n:${tabs.length}">${tabs.map(([v, l, i]) => `<button class="${S.view === v ? 'on' : ''}" data-a="view" data-v="${v}"><b>${i}</b>${l}</button>`).join('')}</nav>`;
+  if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (sel) try { el.setSelectionRange(...sel); } catch {} } }
+  window.scrollTo(0, y);
+}
+
+function remindersView() {
+  const due = dueReminders(); if (!due.length) return '';
+  return `<div class="rem"><b style="font-size:13px;opacity:.9">🔔 Pengingat (${due.length})</b>${due.slice(0, 5).map(it => `<div class="rem-i"><b>${esc(it.data.title || '(tanpa judul)')} <span style="font-weight:500;opacity:.85">· ${fmtDT(remAt(it))}</span></b>
+    <button class="btn sm" data-a="snooze" data-k="${key(it)}">Tunda 10 mnt</button>${it.kind === 'todo' ? `<button class="btn sm" data-a="toggle" data-k="${key(it)}">Selesai ✓</button>` : ''}<button class="btn sm" data-a="ack" data-k="${key(it)}">Oke</button></div>`).join('')}</div>`;
+}
+
+function groupOf(t) { const d = t.data; if (d.done) return 'done'; if (!d.date) return 'nodate'; const n = diffDays(d.date); return n < 0 ? 'late' : n === 0 ? 'today' : n <= 7 ? 'week' : 'later'; }
+function leftOf(t) {
+  const d = t.data; if (d.done) return ['Selesai', 'ok']; if (!d.date) return ['—', 'none'];
+  const n = diffDays(d.date); return n < 0 ? [`Lewat ${-n} hari`, 'late'] : n === 0 ? ['Hari ini', 'today'] : n === 1 ? ['Besok', 'soon'] : [`${n} hari lagi`, n <= 7 ? 'soon' : 'far'];
+}
+const byDate = (a, b) => (a.data.date || '9999').localeCompare(b.data.date || '9999') || (a.data.time || '99').localeCompare(b.data.time || '99') || (PRIO[b.data.prio]?.[1] || 2) - (PRIO[a.data.prio]?.[1] || 2);
+function todoRow(t) {
+  const d = t.data, [l, lc] = leftOf(t), p = PRIO[d.prio] ? d.prio : 'mid', subs = d.subs || [];
+  return `<div class="row ${d.done ? 'is-done' : ''}" data-a="edit" data-k="${key(t)}">
+    ${RO() ? '' : `<button class="chk ${d.done ? 'on' : ''}" data-a="toggle" data-k="${key(t)}" aria-label="Tandai selesai">${d.done ? '✓' : ''}</button>`}
+    <div class="r-main"><div class="r-title">${esc(d.title || '(tanpa judul)')}</div><div class="r-meta">${S.admin ? `<span class="who">👤 ${esc(t.owner)}</span>` : ''}${d.cat ? `<span class="tag">#${esc(d.cat)}</span>` : ''}${subs.length ? `<span>☑ ${subs.filter(s => s.d).length}/${subs.length}</span>` : ''}${d.repeat && d.repeat !== 'none' ? `<span>🔁 ${REP[d.repeat]}</span>` : ''}${d.notes ? '<span>🗒 catatan</span>' : ''}</div></div>
+    <div class="r-date">${d.date ? fmtD(d.date) + (d.time ? ' · ' + d.time : '') : '—'}</div>
+    <div class="r-left"><span class="pill ${lc}">${l}</span></div>
+    <div class="r-prio"><span class="prio ${p}">${PRIO[p][0]}</span></div></div>`;
+}
+const thead = () => `<div class="thead">${RO() ? '' : '<span></span>'}<span>Tugas</span><span>Tanggal</span><span>Sisa hari</span><span>Kepentingan</span></div>`;
+function ownerFilter() { return S.admin ? `<select id="f-owner" data-f="owner"><option value="">Semua pengguna (${S.users.length})</option>${S.users.map(u => `<option value="${esc(u.owner)}"${S.f.owner === u.owner ? ' selected' : ''}>${esc(u.owner)}</option>`).join('')}</select>` : ''; }
+
+function todoView() {
+  const all = live('todo'), cats = [...new Set(all.map(t => t.data.cat).filter(Boolean))].sort();
+  const cnt = g => all.filter(t => groupOf(t) === g).length;
+  const q = S.f.q.toLowerCase();
+  const list = all.filter(t => (!q || (t.data.title + ' ' + (t.data.notes || '') + ' ' + (t.data.cat || '') + ' ' + (S.admin ? t.owner : '')).toLowerCase().includes(q)) && (!S.f.prio || t.data.prio === S.f.prio) && (!S.f.cat || t.data.cat === S.f.cat));
+  const now = new Date();
+  const groups = GROUPS.filter(([g]) => !S.f.stat || g === S.f.stat);
+  const stat = (g, l) => `<button class="stat ${g} ${S.f.stat === g ? 'sel' : ''}" data-a="stat" data-v="${g}"><b>${cnt(g)}</b><span>${l}</span></button>`;
+  return `<div class="head"><div><div class="muted small">${longD(now)} · <span id="clock">${pad(now.getHours())}:${pad(now.getMinutes())}</span></div><h1>${S.admin ? 'Semua to-do pengguna' : 'To-do list'}</h1></div>${ownerFilter()}</div>
+    <div class="stats">${stat('late', 'Terlambat')}${stat('today', 'Hari ini')}${stat('week', '7 hari ke depan')}${stat('done', 'Selesai')}</div>
+    ${RO() ? '' : `<form class="card qa" id="qa-form" autocomplete="off"><input id="qa-title" placeholder="Tambah to-do… (Enter)" value="${esc(S.qa.title)}" maxlength="200">
+      <input id="qa-date" type="date" value="${esc(S.qa.date)}" title="Tanggal">
+      <select id="qa-prio" title="Kepentingan">${Object.entries(PRIO).map(([k, [l]]) => `<option value="${k}"${S.qa.prio === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
+      <button class="btn primary" type="submit">＋ Tambah</button><button class="btn" type="button" data-a="newtodo">Detail…</button></form>`}
+    <div class="filters"><input id="f-q" data-f="q" type="search" placeholder="🔍 Cari to-do…" value="${esc(S.f.q)}">
+      <select id="f-prio" data-f="prio"><option value="">Semua kepentingan</option>${Object.entries(PRIO).map(([k, [l]]) => `<option value="${k}"${S.f.prio === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
+      ${cats.length ? `<select id="f-cat" data-f="cat"><option value="">Semua kategori</option>${cats.map(c => `<option${S.f.cat === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>` : ''}
+      ${S.f.stat || S.f.q || S.f.prio || S.f.cat ? '<button class="btn" data-a="clearf">Reset filter</button>' : ''}</div>
+    ${groups.map(([g, label, ic]) => {
+      const rows = list.filter(t => groupOf(t) === g).sort(g === 'done' ? (a, b) => (b.data.doneAt || 0) - (a.data.doneAt || 0) : byDate);
+      if (!rows.length && (g === 'done' || g === 'nodate' || g === 'later')) return '';
+      const open = S.open['g-' + g] ?? (g !== 'done');
+      return `<details class="card grp ${g}" data-g="g-${g}"${open ? ' open' : ''}><summary>${ic} ${label} <span class="cnt">${rows.length}</span></summary>
+        <div class="${RO() ? 'ro' : ''}">${rows.length ? thead() + rows.slice(0, g === 'done' ? 100 : 500).map(todoRow).join('') : `<div class="empty">${g === 'late' ? 'Tidak ada yang terlambat 👍' : 'Kosong.'}</div>`}</div></details>`;
+    }).join('')}
+    ${!all.length ? `<p class="muted" style="text-align:center;margin-top:24px">${S.admin ? 'Belum ada to-do dari pengguna mana pun.' : 'Belum ada to-do. Ketik di kolom di atas lalu tekan Enter.'}</p>` : ''}`;
+}
+
+function dayInfo(ds, todos, notes) {
+  const t = todos.filter(x => x.data.date === ds), n = notes.filter(x => x.data.remind && x.data.remind.slice(0, 10) === ds);
+  const open = t.filter(x => !x.data.done); const top = Math.max(0, ...open.map(x => PRIO[x.data.prio]?.[1] || 2));
+  const cls = top === 3 ? 'p-high' : top === 2 ? 'p-mid' : top === 1 ? 'p-low' : t.length ? 'p-done' : n.length ? 'p-note' : '';
+  return { t, n, cls };
+}
+function calView() {
+  const m = S.cal.month, first = new Date(m.getFullYear(), m.getMonth(), 1), start = addD(first, -((first.getDay() + 6) % 7));
+  const last = new Date(m.getFullYear(), m.getMonth() + 1, 0), weeks = Math.ceil((((first.getDay() + 6) % 7) + last.getDate()) / 7);
+  const todos = live('todo'), notes = live('note'), tds = ymd(today());
+  let cells = '';
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = addD(start, i), ds = ymd(d), { t, n, cls } = dayInfo(ds, todos, notes);
+    const evs = [...t.sort(byDate).map(x => `<div class="ev ${x.data.done ? 'dn' : ''}">${esc(x.data.title)}</div>`), ...n.map(x => `<div class="ev">🔔 ${esc(x.data.title)}</div>`)];
+    const dots = [...t.map(x => x.data.done ? 'done' : (x.data.prio || 'mid')), ...n.map(() => 'note')].slice(0, 5);
+    cells += `<button class="day ${cls} ${d.getMonth() !== m.getMonth() ? 'out' : ''} ${ds === tds ? 'today' : ''} ${ds === S.cal.sel ? 'sel' : ''}" data-a="pick" data-v="${ds}">
+      <span class="n">${d.getDate()}</span>${evs.slice(0, 2).join('')}${evs.length > 2 ? `<div class="ev muted">+${evs.length - 2} lagi</div>` : ''}<span class="dots">${dots.map(c => `<i class="dot ${c}"></i>`).join('')}</span></button>`;
+  }
+  const sd = parseD(S.cal.sel), sel = dayInfo(S.cal.sel, todos, notes);
+  const monthItems = todos.filter(x => x.data.date && parseD(x.data.date).getMonth() === m.getMonth() && parseD(x.data.date).getFullYear() === m.getFullYear()).sort(byDate);
+  const openM = S.open['cal-month'] ?? false;
+  return `<div class="head"><div><div class="muted small">Klik tanggal untuk melihat atau menambah rencana</div><h1>Kalender</h1></div>${ownerFilter()}</div>
+  <div class="cal-wrap"><div class="card cal">
+    <div class="cal-h"><button class="btn" data-a="mprev" aria-label="Bulan sebelumnya">‹</button><h2>${MONTHS[m.getMonth()]} ${m.getFullYear()}</h2><button class="btn" data-a="mtoday">Hari ini</button><button class="btn" data-a="mnext" aria-label="Bulan berikutnya">›</button></div>
+    <div class="grid7">${['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map(x => `<div class="dow">${x}</div>`).join('')}${cells}</div>
+    <div class="legend"><span><i style="background:var(--high)"></i>Ada kepentingan tinggi</span><span><i style="background:var(--mid)"></i>Sedang</span><span><i style="background:var(--low)"></i>Rendah</span><span><i style="background:var(--done)"></i>Semua selesai</span><span><i style="background:var(--acc2)"></i>Pengingat catatan</span></div>
+  </div>
+  <div class="card side ${RO() ? 'ro' : ''}">
+    <div class="side-h"><h3>${longD(sd)}<div class="muted small" style="font-weight:500">${sel.t.length} rencana · ${sel.n.length} pengingat catatan</div></h3>
+      ${RO() ? '' : `<button class="btn primary sm" data-a="newtodo" data-v="${S.cal.sel}">＋ Rencana</button><button class="btn sm" data-a="newnote" data-v="${S.cal.sel}">＋ Catatan</button>`}</div>
+    ${sel.t.sort(byDate).map(todoRow).join('')}
+    ${sel.n.length ? `<div class="notes-list" style="padding-top:10px">${sel.n.map(noteCard).join('')}</div>` : ''}
+    ${!sel.t.length && !sel.n.length ? '<div class="empty">Belum ada rencana di tanggal ini.</div>' : ''}
+  </div></div>
+  <details class="card grp" data-g="cal-month" style="margin-top:14px"${openM ? ' open' : ''}><summary>🗓️ Semua rencana ${MONTHS[m.getMonth()]} <span class="cnt">${monthItems.length}</span></summary>
+    <div class="${RO() ? 'ro' : ''}">${monthItems.length ? thead() + monthItems.map(todoRow).join('') : '<div class="empty">Belum ada rencana bulan ini.</div>'}</div></details>`;
+}
+
+function noteCard(n) {
+  const d = n.data, r = remAt(n), past = r && new Date(r) <= new Date();
+  return `<details class="note" style="--c:${esc(d.color || COLORS[0])}" data-n="${key(n)}"${S.openNotes.has(key(n)) ? ' open' : ''}><summary>${d.pinned ? '📌' : ''}<span>${esc(d.title || '(tanpa judul)')}</span>
+    <span class="nmeta">${S.admin ? `<span class="who">👤 ${esc(n.owner)}</span>` : ''}${r ? `<span class="bell ${past ? 'past' : ''}">🔔 ${fmtDT(r)}</span>` : ''}</span></summary>
+    ${d.body ? `<div class="nb">${esc(d.body)}</div>` : ''}
+    <div class="nact"><span class="muted small" style="flex:1;align-self:center">Diubah ${fmtDT(new Date(n.updated))}</span>${RO() ? '' : `<button class="btn sm" data-a="pin" data-k="${key(n)}">${d.pinned ? 'Lepas sematan' : '📌 Sematkan'}</button><button class="btn sm" data-a="edit" data-k="${key(n)}">✏️ Ubah</button>`}</div></details>`;
+}
+function notesView() {
+  const q = S.nq.toLowerCase();
+  const all = live('note').filter(n => !q || ((n.data.title || '') + ' ' + (n.data.body || '') + ' ' + (S.admin ? n.owner : '')).toLowerCase().includes(q));
+  const now = new Date(), up = n => remAt(n) && new Date(remAt(n)) > now;
+  const recent = (a, b) => b.updated - a.updated;
+  const secs = [['n-pin', '📌 Disematkan', all.filter(n => n.data.pinned).sort(recent)],
+    ['n-rem', '🔔 Pengingat mendatang', all.filter(n => !n.data.pinned && up(n)).sort((a, b) => remAt(a).localeCompare(remAt(b)))],
+    ['n-all', '🗒 Catatan lainnya', all.filter(n => !n.data.pinned && !up(n)).sort(recent)]];
+  return `<div class="head"><div><div class="muted small">Reminder & catatan yang tidak boleh lupa</div><h1>${S.admin ? 'Semua catatan penting' : 'Catatan penting'}</h1></div>${ownerFilter()}${RO() ? '' : '<button class="btn primary" data-a="newnote">＋ Catatan baru</button>'}</div>
+    <div class="filters"><input id="n-q" data-f="nq" type="search" placeholder="🔍 Cari catatan…" value="${esc(S.nq)}"></div>
+    ${secs.map(([g, label, list]) => !list.length && g !== 'n-all' ? '' : `<details class="card grp" data-g="${g}"${(S.open[g] ?? true) ? ' open' : ''}><summary>${label} <span class="cnt">${list.length}</span></summary>
+      ${list.length ? `<div class="notes-list">${list.map(noteCard).join('')}</div>` : `<div class="empty">${all.length || q ? 'Kosong.' : 'Belum ada catatan.'}</div>`}</details>`).join('')}`;
+}
+
+function usersView() {
+  const rows = S.users.map(u => {
+    const its = [...S.items.values()].filter(i => !i.deleted && i.owner === u.owner), t = its.filter(i => i.kind === 'todo');
+    return { u, active: t.filter(x => !x.data.done).length, late: t.filter(x => groupOf(x) === 'late').length, done: t.filter(x => x.data.done).length, notes: its.filter(i => i.kind === 'note').length };
+  });
+  return `<div class="head"><div><div class="muted small">Klik pengguna untuk melihat to-do miliknya</div><h1>Pengguna (${S.users.length})</h1></div></div>
+    <div class="card" style="overflow-x:auto"><table class="users"><thead><tr><th>Pengguna</th><th class="num">Aktif</th><th class="num">Terlambat</th><th class="num">Selesai</th><th class="num">Catatan</th><th>Terakhir aktif</th></tr></thead><tbody>
+    ${rows.map(r => `<tr class="click" data-a="seeuser" data-v="${esc(r.u.owner)}"><td><b>👤 ${esc(r.u.owner)}</b></td><td class="num">${r.active}</td><td class="num" style="color:${r.late ? 'var(--high)' : 'inherit'}">${r.late}</td><td class="num">${r.done}</td><td class="num">${r.notes}</td><td class="muted">${r.u.last_seen ? fmtDT(r.u.last_seen) : '—'}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Belum ada pengguna.</td></tr>'}
+    </tbody></table></div>`;
+}
+
+function gateView() {
+  const adm = normUser($('#user-in')?.value) === ADMIN;
+  return `<div class="gate"><form class="gate-card" id="gate-form" autocomplete="off">
+    <div class="logo">✓</div><h1>Planner</h1><p class="gate-sub">To-do, kalender & catatan penting</p>
+    <label class="gate-field"><span>👤</span><span class="mask-wrap"><input id="user-in" name="user" type="text" placeholder="Nama pengguna" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" maxlength="32" required value="${esc($('#user-in')?.value || '')}"><span id="user-mask" aria-hidden="true"></span></span></label>
+    <label class="gate-field" id="pass-row" style="${adm ? '' : 'display:none'}"><span>🔑</span><input id="pass-in" type="password" inputmode="numeric" placeholder="Password Admin" autocomplete="off"></label>
+    <label class="check"><input type="checkbox" id="remember" checked> Tetap masuk di perangkat ini</label>
+    <button class="gate-btn" type="submit">Masuk</button>
+    <div class="gate-err" id="gate-err" role="alert"></div>
+    <p class="gate-note">Setiap nama pengguna memiliki planner sendiri. Nama yang belum pernah dipakai akan membuat planner baru. Data tersinkron otomatis di HP dan laptop.</p>
+  </form></div>`;
+}
+function syncMask() {
+  const i = $('#user-in'), m = $('#user-mask'); if (!i || !m) return;
+  const v = i.value; m.textContent = v.slice(0, 4) + '*'.repeat(Math.max(0, v.length - 4)); m.scrollLeft = i.scrollLeft;
+  const pr = $('#pass-row'); if (pr) pr.style.display = normUser(v) === ADMIN ? '' : 'none';
+}
+
+// ---------- dialogs ----------
+const dlg = () => $('#dlg');
+function openTodo(t, date) {
+  const d = t ? { ...t.data, subs: (t.data.subs || []).map(s => ({ ...s })) } : { title: '', date: date ?? ymd(today()), time: '', prio: 'mid', cat: '', repeat: 'none', notes: '', subs: [] };
+  S.edit = { kind: 'todo', k: t ? key(t) : null, subs: d.subs };
+  const ro = RO(), dis = ro ? ' disabled' : '';
+  const cats = [...new Set(live('todo').map(x => x.data.cat).filter(Boolean))];
+  dlg().innerHTML = `<form class="dlg" id="todo-form" method="dialog" autocomplete="off">
+    <h2>${ro ? 'To-do · ' + esc(t.owner) : t ? 'Ubah to-do' : 'To-do baru'}</h2>
+    <label class="fld"><span>Judul</span><input id="t-title" required maxlength="200" value="${esc(d.title)}"${dis}></label>
+    <div class="two"><label class="fld"><span>Tanggal</span><input id="t-date" type="date" value="${esc(d.date || '')}"${dis}></label>
+      <label class="fld"><span>Jam (pengingat)</span><input id="t-time" type="time" value="${esc(d.time || '')}"${dis}></label></div>
+    <div class="fld"><span>Tingkat kepentingan</span><div class="seg">${Object.entries(PRIO).map(([k, [l]]) => `<label><input type="radio" name="t-prio" value="${k}"${(d.prio || 'mid') === k ? ' checked' : ''}${dis}><span class="${k}">${l}</span></label>`).join('')}</div></div>
+    <div class="two"><label class="fld"><span>Kategori</span><input id="t-cat" list="cats" maxlength="40" placeholder="mis. Kerja, Rumah" value="${esc(d.cat || '')}"${dis}><datalist id="cats">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist></label>
+      <label class="fld"><span>Ulangi</span><select id="t-rep"${dis}>${Object.entries(REP).map(([k, l]) => `<option value="${k}"${(d.repeat || 'none') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
+    <div class="fld"><span>Sub-tugas</span><div class="subs" id="subs"></div>${ro ? '' : '<div class="sub"><input type="text" id="sub-new" placeholder="Tambah sub-tugas… (Enter)" maxlength="200"><button class="btn sm" type="button" data-a="subadd">＋</button></div>'}</div>
+    <label class="fld"><span>Catatan</span><textarea id="t-notes" rows="3" maxlength="5000"${dis}>${esc(d.notes || '')}</textarea></label>
+    ${t && d.done ? `<p class="muted small" style="margin:0">Selesai ${d.doneAt ? fmtDT(d.doneAt) : ''}</p>` : ''}
+    <div class="dlg-f">${t && !ro ? '<button class="btn danger" type="button" data-a="del">Hapus</button>' : ''}<span class="sp"></span>
+      ${ro ? '<button class="btn primary" type="button" data-a="close">Tutup</button>' : `<button class="btn" type="button" data-a="close">Batal</button><button class="btn primary" type="submit">Simpan</button>`}</div></form>`;
+  drawSubs(); dlg().showModal(); if (!ro && !t) $('#t-title').focus();
+}
+function drawSubs() {
+  const box = $('#subs'); if (!box) return; const ro = RO();
+  box.innerHTML = S.edit.subs.map((s, i) => `<div class="sub"><input type="checkbox" data-sub="${i}"${s.d ? ' checked' : ''}${ro ? ' disabled' : ''}><input type="text" data-subt="${i}" value="${esc(s.t)}"${ro ? ' disabled' : ''}>${ro ? '' : `<button class="x" type="button" data-a="subdel" data-v="${i}" aria-label="Hapus">×</button>`}</div>`).join('') || (ro ? '<span class="muted small">—</span>' : '');
+}
+function openNote(n, date) {
+  const d = n ? n.data : { title: '', body: '', color: COLORS[0], pinned: false, remind: date ? date + 'T09:00' : '' };
+  S.edit = { kind: 'note', k: n ? key(n) : null };
+  const ro = RO(), dis = ro ? ' disabled' : '';
+  dlg().innerHTML = `<form class="dlg" id="note-form" method="dialog" autocomplete="off">
+    <h2>${ro ? 'Catatan · ' + esc(n.owner) : n ? 'Ubah catatan' : 'Catatan penting baru'}</h2>
+    <label class="fld"><span>Judul</span><input id="n-title" required maxlength="200" value="${esc(d.title)}"${dis}></label>
+    <label class="fld"><span>Isi catatan</span><textarea id="n-body" rows="6" maxlength="20000"${dis}>${esc(d.body || '')}</textarea></label>
+    <div class="two"><label class="fld"><span>Pengingat (opsional)</span><input id="n-rem" type="datetime-local" value="${esc(d.remind || '')}"${dis}></label>
+      <div class="fld"><span>Warna</span><div class="swatch">${COLORS.map(c => `<label><input type="radio" name="n-color" value="${c}"${(d.color || COLORS[0]) === c ? ' checked' : ''}${dis}><span style="background:${c}"></span></label>`).join('')}</div></div></div>
+    <label class="check"><input type="checkbox" id="n-pin"${d.pinned ? ' checked' : ''}${dis}> 📌 Sematkan di atas</label>
+    <div class="dlg-f">${n && !ro ? '<button class="btn danger" type="button" data-a="del">Hapus</button>' : ''}<span class="sp"></span>
+      ${ro ? '<button class="btn primary" type="button" data-a="close">Tutup</button>' : `<button class="btn" type="button" data-a="close">Batal</button><button class="btn primary" type="submit">Simpan</button>`}</div></form>`;
+  dlg().showModal(); if (!ro && !n) $('#n-title').focus();
+}
+function openMenu() {
+  const theme = LS.get('theme') || 'auto', np = 'Notification' in window ? Notification.permission : 'unsupported';
+  dlg().innerHTML = `<div class="dlg"><h2>${S.admin ? '🛡 Admin' : '👤 ' + esc(S.user)}</h2>
+    <p class="muted small" style="margin:0">${syncText()} · versi ${BUILD}</p>
+    <div class="fld"><span>Tampilan</span><div class="seg">${[['auto', 'Otomatis'], ['light', 'Terang'], ['dark', 'Gelap']].map(([v, l]) => `<label><input type="radio" name="theme" value="${v}"${theme === v ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div></div>
+    ${S.admin ? '<p class="muted small" style="margin:0">Mode Admin hanya melihat: to-do dan catatan semua pengguna, diperbarui real time.</p>' : `<div class="fld"><span>Notifikasi pengingat</span>${np === 'granted' ? '<span class="small">✓ Aktif — notifikasi muncul saat Planner terbuka (tab atau aplikasi).</span>' : np === 'unsupported' ? '<span class="small muted">Browser ini tidak mendukung notifikasi; pengingat tampil di bagian atas halaman.</span>' : '<button class="btn" data-a="notif">🔔 Aktifkan notifikasi</button>'}</div>
+    <div class="fld"><span>Cadangan</span><div class="seg"><button class="btn" data-a="export">⬇ Ekspor JSON</button><label class="btn" style="text-align:center">⬆ Impor JSON<input type="file" id="imp" accept="application/json,.json" hidden></label></div></div>`}
+    <div class="dlg-f"><button class="btn danger" data-a="logout">Keluar</button><span class="sp"></span><button class="btn primary" data-a="close">Tutup</button></div></div>`;
+  dlg().showModal();
+}
+function saveTodo() {
+  const title = $('#t-title').value.trim(); if (!title) return;
+  const old = S.edit.k ? S.items.get(S.edit.k) : null;
+  const date = $('#t-date').value, time = $('#t-time').value;
+  const data = { ...(old?.data || { created: Date.now() }), title, date, time: date ? time : '', prio: document.querySelector('[name=t-prio]:checked')?.value || 'mid', cat: $('#t-cat').value.trim(), repeat: $('#t-rep').value, notes: $('#t-notes').value, subs: S.edit.subs.filter(s => s.t.trim()) };
+  if (!old || old.data.date !== date || old.data.time !== data.time) { data.snooze = null; data.ack = null; }
+  if (old && old.data.repeat !== data.repeat) data.spawned = false;
+  put(old ? { ...old, data } : newItem('todo', data)); dlg().close(); toast('To-do tersimpan ✓');
+}
+function saveNote() {
+  const title = $('#n-title').value.trim(); if (!title) return;
+  const old = S.edit.k ? S.items.get(S.edit.k) : null, remind = $('#n-rem').value;
+  const data = { ...(old?.data || { created: Date.now() }), title, body: $('#n-body').value, remind, color: document.querySelector('[name=n-color]:checked')?.value || COLORS[0], pinned: $('#n-pin').checked };
+  if (!old || old.data.remind !== remind) { data.snooze = null; data.ack = null; }
+  put(old ? { ...old, data } : newItem('note', data)); dlg().close(); toast('Catatan tersimpan ✓');
+}
+let toastT = null;
+function toast(msg) { let t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); } t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2500); }
+function applyTheme() { const t = LS.get('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
+
+// ---------- events ----------
+const A = {
+  view: el => { S.view = el.dataset.v; window.scrollTo(0, 0); render(); },
+  menu: () => openMenu(),
+  close: () => dlg().close(),
+  logout: () => logout(),
+  stat: el => { S.f.stat = S.f.stat === el.dataset.v ? '' : el.dataset.v; render(); },
+  clearf: () => { S.f.q = S.f.prio = S.f.cat = S.f.stat = ''; render(); },
+  toggle: el => toggleTodo(el.dataset.k),
+  edit: el => { const it = S.items.get(el.dataset.k); if (!it) return; it.kind === 'todo' ? openTodo(it) : openNote(it); },
+  newtodo: el => { openTodo(null, el.dataset.v || S.qa.date); if (!el.dataset.v && S.qa.title) { $('#t-title').value = S.qa.title; S.qa.title = ''; } },
+  newnote: el => openNote(null, el.dataset.v),
+  pick: el => { S.cal.sel = el.dataset.v; const d = parseD(el.dataset.v); if (d.getMonth() !== S.cal.month.getMonth()) S.cal.month = new Date(d.getFullYear(), d.getMonth(), 1); render(); },
+  mprev: () => { S.cal.month = new Date(S.cal.month.getFullYear(), S.cal.month.getMonth() - 1, 1); render(); },
+  mnext: () => { S.cal.month = new Date(S.cal.month.getFullYear(), S.cal.month.getMonth() + 1, 1); render(); },
+  mtoday: () => { const t = today(); S.cal.month = new Date(t.getFullYear(), t.getMonth(), 1); S.cal.sel = ymd(t); render(); },
+  pin: el => { const n = S.items.get(el.dataset.k); if (n) put({ ...n, data: { ...n.data, pinned: !n.data.pinned } }); },
+  del: () => { const it = S.items.get(S.edit.k); if (!it || !confirm(`Hapus "${it.data.title}"?`)) return; put({ ...it, deleted: true, data: { title: it.data.title } }); dlg().close(); toast('Dihapus.'); },
+  subadd: () => { const i = $('#sub-new'); const v = i.value.trim(); if (!v) return; S.edit.subs.push({ t: v, d: false }); i.value = ''; drawSubs(); i.focus(); },
+  subdel: el => { S.edit.subs.splice(Number(el.dataset.v), 1); drawSubs(); },
+  ack: el => { const it = S.items.get(el.dataset.k); if (it) put({ ...it, data: { ...it.data, ack: remAt(it) } }); },
+  snooze: el => { const it = S.items.get(el.dataset.k); if (!it) return; const d = new Date(Date.now() + 10 * 60e3); put({ ...it, data: { ...it.data, snooze: `${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}` } }); toast('Ditunda 10 menit.'); },
+  seeuser: el => { S.f.owner = el.dataset.v; S.view = 'todo'; render(); },
+  notif: async () => { try { await Notification.requestPermission(); } catch {} openMenu(); },
+  export: () => {
+    const data = JSON.stringify({ app: 'Planner', user: S.user, exported: new Date().toISOString(), items: [...S.items.values()].filter(i => !i.deleted) }, null, 1);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' })); a.download = `Planner-${S.user}-${ymd(today())}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+};
+document.addEventListener('click', ev => {
+  const el = ev.target.closest('[data-a]'); if (!el || !A[el.dataset.a]) return;
+  if (el.closest('summary') && el.dataset.a !== 'toggle') return;
+  if (el.tagName === 'BUTTON' && el.type === 'submit') return;
+  ev.preventDefault(); ev.stopPropagation(); A[el.dataset.a](el);
+});
+document.addEventListener('toggle', ev => {
+  const g = ev.target.dataset?.g, n = ev.target.dataset?.n;
+  if (g) { S.open[g] = ev.target.open; LS.set('open', JSON.stringify(S.open)); }
+  if (n) ev.target.open ? S.openNotes.add(n) : S.openNotes.delete(n);
+}, true);
+document.addEventListener('input', ev => {
+  const t = ev.target;
+  if (t.id === 'user-in') return syncMask();
+  if (t.dataset.f && t.tagName !== 'SELECT') { if (t.dataset.f === 'nq') S.nq = t.value; else S.f[t.dataset.f] = t.value; render(); }
+  if (t.id === 'qa-title') S.qa.title = t.value;
+  if (t.dataset.subt) S.edit.subs[Number(t.dataset.subt)].t = t.value;
+});
+document.addEventListener('change', ev => {
+  const t = ev.target;
+  if (t.dataset.f && t.tagName === 'SELECT') { S.f[t.dataset.f] = t.value; render(); }
+  if (t.id === 'qa-date') S.qa.date = t.value;
+  if (t.id === 'qa-prio') S.qa.prio = t.value;
+  if (t.dataset.sub) S.edit.subs[Number(t.dataset.sub)].d = t.checked;
+  if (t.name === 'theme') { t.value === 'auto' ? LS.del('theme') : LS.set('theme', t.value); applyTheme(); }
+  if (t.id === 'imp' && t.files[0]) t.files[0].text().then(txt => {
+    const o = JSON.parse(txt); const list = (o.items || []).filter(i => i && (i.kind === 'todo' || i.kind === 'note') && i.data);
+    if (!list.length) throw new Error('kosong');
+    for (const i of list) { const k = S.user + '/' + i.id, cur = S.items.get(k); const it = { id: /^[A-Za-z0-9_-]{6,64}$/.test(i.id) ? i.id : uid(), owner: S.user, kind: i.kind, data: i.data, updated: Math.max(Date.now(), (cur?.updated || 0) + 1), deleted: false }; S.items.set(key(it), it); S.queue.add(key(it)); }
+    saveCache(); dlg().close(); render(); pushSoon(); toast(`${list.length} item diimpor ✓`);
+  }).catch(() => alert('File tidak bisa dibaca sebagai cadangan Planner.'));
+});
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Enter' && ev.target.id === 'sub-new') { ev.preventDefault(); A.subadd(); }
+  if (ev.key === 'Enter' && ev.target.dataset?.subt !== undefined) ev.preventDefault();
+});
+document.addEventListener('submit', ev => {
+  const f = ev.target; ev.preventDefault();
+  if (f.id === 'todo-form') return saveTodo();
+  if (f.id === 'note-form') return saveNote();
+  if (f.id === 'qa-form') { const title = S.qa.title.trim(); if (!title) return; put(newItem('todo', { title, date: S.qa.date, time: '', prio: S.qa.prio, cat: '', repeat: 'none', notes: '', subs: [] })); S.qa.title = ''; render(); $('#qa-title')?.focus(); toast('To-do ditambahkan ✓'); return; }
+  if (f.id === 'gate-form') {
+    const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'Membuka…';
+    login($('#user-in').value, $('#pass-in').value, $('#remember').checked).then(render, e => { btn.disabled = false; btn.textContent = 'Masuk'; $('#gate-err').textContent = e.message; });
+  }
+});
+dlg().addEventListener('close', () => { S.edit = null; render(); });
+
+// ---------- auto update + boot ----------
+async function checkUpdate() { // phones keep old copies; load the newer build when nothing is being edited
+  if (dlg().open || S.queue.size) return;
+  try {
+    const r = await fetch(location.pathname + '?_=' + Date.now(), { cache: 'no-store' }); const m = /const BUILD = '([^']+)'/.exec(await r.text());
+    if (m && m[1] !== BUILD && m[1] !== '__BUILD__' && SS.get('reloaded') !== m[1]) { SS.set('reloaded', m[1]); location.replace(location.pathname + '?v=' + m[1]); }
+  } catch {}
+}
+let lastDay = ymd(today());
+setInterval(() => {
+  if (!S.user && !S.admin) return;
+  const c = $('#clock'); if (c) { const n = new Date(); c.textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}`; }
+  if (ymd(today()) !== lastDay) { lastDay = ymd(today()); S.qa.date = lastDay; render(); }
+  notifyCheck();
+}, 15000);
+setInterval(() => { if (!document.hidden) syncNow(); }, 10000);
+setInterval(checkUpdate, 10 * 60e3);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { syncNow(); notifyCheck(); } });
+window.addEventListener('online', () => syncNow());
+window.addEventListener('focus', () => syncNow());
+
+async function boot() {
+  applyTheme(); checkUpdate();
+  let s = null; try { s = JSON.parse(LS.get('session') || 'null'); } catch {}
+  const ssUser = SS.get('user'), ssAdmin = SS.get('admin');
+  if (s?.admin || ssAdmin) {
+    const pass = ssAdmin;
+    if (pass) { S.admin = true; S.pass = pass; loadCache(); S.view = 'todo'; render(); liveStart(); syncNow(); return; }
+    LS.del('session'); // admin password is never stored on the device; ask again
+  } else if (s?.user || ssUser) {
+    S.user = s?.user || ssUser; loadCache(); render(); liveStart(); rpc('pl_hello', { p_owner: S.user }).catch(() => {}); syncNow(); notifyCheck(); return;
+  }
+  render();
+}
+boot();
+</script>
+</body>
+</html>
