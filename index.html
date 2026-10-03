@@ -205,7 +205,7 @@ dialog::backdrop{background:rgba(10,12,20,.45)}
 <dialog id="dlg"></dialog>
 <noscript>Planner memerlukan JavaScript.</noscript>
 <script>// Planner — to-do, kalender, catatan penting. Data per nama pengguna di Supabase (proyek saku-yuk), sinkron real time.
-const BUILD = '20261003-182222';
+const BUILD = '20261003-183407';
 const SB_URL = 'https://bbptcxpzzvgpxqylkrmw.supabase.co', SB_KEY = 'sb_publishable_Ny-WHCEZ3WmcLFsPBx9QeQ_9xgo7MxR'; // public key; tables closed, only pl_* functions
 const ADMIN = 'admin';
 
@@ -242,7 +242,7 @@ const GROUPS = [['late', 'Terlambat', '⚠️'], ['today', 'Hari ini', '📌'], 
 
 // ---------- state ----------
 const S = {
-  user: null, admin: false, pass: '', users: [],
+  user: null, admin: false, pass: '', users: [], pin: '', hasPin: false, gate: null,
   items: new Map(), seq: 0, queue: new Set(),
   view: 'todo', cal: { month: new Date(today().getFullYear(), today().getMonth(), 1), sel: ymd(today()) },
   f: { q: '', prio: '', cat: '', owner: '', stat: '' }, nq: '',
@@ -315,7 +315,8 @@ async function syncNow() {
       const keys = [...S.queue], sent = keys.map(k => S.items.get(k)).filter(Boolean);
       const snap = new Map(sent.map(i => [key(i), i.updated]));
       for (let i = 0; i < sent.length; i += 200)
-        await rpc('pl_put', { p_owner: S.user, p_items: sent.slice(i, i + 200).map(({ id, kind, data, updated, deleted }) => ({ id, kind, data, updated, deleted })) });
+        { const r = await rpc('pl_put', { p_owner: S.user, p_pin: S.pin || null, p_items: sent.slice(i, i + 200).map(({ id, kind, data, updated, deleted }) => ({ id, kind, data, updated, deleted })) });
+          if (!r?.ok) { needPin(r?.pin); return; } }
       for (const k of keys) if (S.items.get(k)?.updated === snap.get(k)) S.queue.delete(k);
       saveCache(); ping();
     }
@@ -324,7 +325,7 @@ async function syncNow() {
       const r = await rpc('pl_admin', { p_pass: S.pass, p_after: S.seq });
       if (!r?.ok) { logout(); return; }
       S.users = r.users || []; LS.set('admin.users', JSON.stringify(S.users)); rows = r.rows || [];
-    } else rows = (await rpc('pl_list', { p_owner: S.user, p_after: S.seq })) || [];
+    } else { const r = await rpc('pl_list', { p_owner: S.user, p_after: S.seq, p_pin: S.pin || null }); if (!r?.ok) { needPin(r?.pin); return; } rows = r.rows || []; }
     if (who !== cacheKey()) return;
     for (const r of rows) {
       const it = { id: r.id, owner: r.owner || S.user, kind: r.kind, data: r.data || {}, updated: Number(r.updated), deleted: !!r.deleted };
@@ -361,7 +362,18 @@ const syncText = () => S.sync.err ? '⚠ ' + S.sync.err : S.sync.busy || S.queue
 function showSync() { document.querySelectorAll('.sync').forEach(e => { e.textContent = syncText(); }); }
 
 // ---------- login ----------
-async function login(raw, pass, remember) {
+const sha = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map(x => x.toString(16).padStart(2, '0')).join('');
+const pinHash = (name, pin) => sha('planner-pin:' + name + ':' + pin);
+const PIN_MSG = { need: 'Masukkan PIN.', wrong: 'PIN salah.', locked: 'Terlalu banyak PIN salah. Coba lagi 15 menit lagi.', format: 'PIN harus 4–12 angka.', invalid: 'Nama pengguna tidak valid.' };
+// server says this session's PIN is missing/wrong (e.g. PIN set or changed on another device): back to the PIN screen
+function needPin(code) {
+  const name = S.user; if (!name) return;
+  liveStop(); LS.set('u.' + name + '.haspin', '1'); SS.del('pin.' + name);
+  S.user = null; S.pin = ''; S.items = new Map(); S.queue = new Set(); S.seq = 0;
+  S.gate = { name, msg: code === 'locked' ? PIN_MSG.locked : 'Akun ini memakai PIN. Masukkan PIN untuk melanjutkan.' };
+  if (dlg().open) dlg().close(); render();
+}
+async function login(raw, pass, remember, pin) {
   const name = normUser(raw);
   if (!validUser(name)) throw new Error('Nama pengguna 3–32 karakter: huruf, angka, titik, garis bawah, atau tanda minus.');
   if (name === ADMIN) {
@@ -375,17 +387,26 @@ async function login(raw, pass, remember) {
     saveCache(); LS.set('admin.users', JSON.stringify(S.users)); S.sync.at = new Date();
     SS.set('admin', pass); if (remember) LS.set('session', JSON.stringify({ admin: true })); else LS.del('session');
   } else {
-    S.admin = false; S.user = name; S.pass = '';
+    let r = null;
+    try { r = await rpc('pl_login', { p_owner: name, p_pin: pin || null }); } catch (e) { // offline: unlock with the PIN checked on this device before
+      const h = LS.get('u.' + name + '.pinhash');
+      if (h) { if (!pin) { const er = new Error(PIN_MSG.need); er.needPin = true; throw er; } if (await pinHash(name, pin) !== h) throw new Error(PIN_MSG.wrong); }
+      else if (LS.get('u.' + name + '.haspin')) throw new Error('Tidak bisa menghubungi server (' + e.message + ').');
+    }
+    if (r && !r.ok) { const er = new Error(PIN_MSG[r.pin] || 'Gagal masuk.'); er.needPin = r.pin === 'need'; throw er; }
+    S.admin = false; S.user = name; S.pass = ''; S.pin = pin || ''; S.gate = null;
+    if (r) { S.hasPin = !!r.pin; if (r.pin) { LS.set('u.' + name + '.haspin', '1'); LS.set('u.' + name + '.pinhash', await pinHash(name, pin)); } else { LS.del('u.' + name + '.haspin'); LS.del('u.' + name + '.pinhash'); } }
+    else S.hasPin = !!pin;
+    if (pin) SS.set('pin.' + name, pin);
     loadCache();
     if (remember) LS.set('session', JSON.stringify({ user: name })); else { LS.del('session'); SS.set('user', name); }
-    rpc('pl_hello', { p_owner: name }).catch(() => {});
     setTimeout(syncNow, 0);
   }
   S.view = 'todo'; S.f.stat = '';
   liveStart();
 }
 function logout() {
-  liveStop(); LS.del('session'); SS.del('admin'); SS.del('user');
+  liveStop(); LS.del('session'); SS.del('admin'); SS.del('user'); if (S.user) SS.del('pin.' + S.user); S.pin = ''; S.gate = null;
   S.user = null; S.admin = false; S.pass = ''; S.items = new Map(); S.queue = new Set(); S.seq = 0; S.sync = { busy: false, again: false, at: null, err: '' };
   if (dlg().open) dlg().close(); render();
 }
@@ -413,7 +434,7 @@ function render() {
   const app = $('#app');
   const ae = document.activeElement, focusId = ae && app.contains(ae) ? ae.id : null, sel = focusId && 'selectionStart' in ae ? [ae.selectionStart, ae.selectionEnd] : null;
   const y = window.scrollY;
-  if (!S.user && !S.admin) { app.innerHTML = gateView(); syncMask(); setTimeout(() => $('#user-in')?.focus(), 30); return; }
+  if (!S.user && !S.admin) { app.innerHTML = gateView(); syncMask(); setTimeout(() => ($('#pin-in') || $('#user-in'))?.focus(), 30); return; }
   const views = { todo: todoView, cal: calView, notes: notesView, users: usersView };
   const tabs = [['todo', 'To-do', '✓'], ['cal', 'Kalender', '📅'], ['notes', 'Catatan', '🗒'], ...(S.admin ? [['users', 'Pengguna', '👥']] : [])];
   app.innerHTML = `<header class="top"><div class="top-in">
@@ -544,12 +565,20 @@ function usersView() {
     return { u, active: t.filter(x => !x.data.done).length, late: t.filter(x => groupOf(x) === 'late').length, done: t.filter(x => x.data.done).length, notes: its.filter(i => i.kind === 'note').length };
   });
   return `<div class="head"><div><div class="muted small">Klik pengguna untuk melihat to-do miliknya</div><h1>Pengguna (${S.users.length})</h1></div></div>
-    <div class="card" style="overflow-x:auto"><table class="users"><thead><tr><th>Pengguna</th><th class="num">Aktif</th><th class="num">Terlambat</th><th class="num">Selesai</th><th class="num">Catatan</th><th>Terakhir aktif</th></tr></thead><tbody>
-    ${rows.map(r => `<tr class="click" data-a="seeuser" data-v="${esc(r.u.owner)}"><td><b>👤 ${esc(r.u.owner)}</b></td><td class="num">${r.active}</td><td class="num" style="color:${r.late ? 'var(--high)' : 'inherit'}">${r.late}</td><td class="num">${r.done}</td><td class="num">${r.notes}</td><td class="muted">${r.u.last_seen ? fmtDT(r.u.last_seen) : '—'}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Belum ada pengguna.</td></tr>'}
+    <div class="card" style="overflow-x:auto"><table class="users"><thead><tr><th>Pengguna</th><th class="num">Aktif</th><th class="num">Terlambat</th><th class="num">Selesai</th><th class="num">Catatan</th><th>Terakhir aktif</th><th>PIN</th></tr></thead><tbody>
+    ${rows.map(r => `<tr class="click" data-a="seeuser" data-v="${esc(r.u.owner)}"><td><b>👤 ${esc(r.u.owner)}</b></td><td class="num">${r.active}</td><td class="num" style="color:${r.late ? 'var(--high)' : 'inherit'}">${r.late}</td><td class="num">${r.done}</td><td class="num">${r.notes}</td><td class="muted">${r.u.last_seen ? fmtDT(r.u.last_seen) : '—'}</td><td>${r.u.pin ? `🔒 <button class="btn sm" data-a="pinreset" data-v="${esc(r.u.owner)}">Reset</button>` : '<span class="muted">—</span>'}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Belum ada pengguna.</td></tr>'}
     </tbody></table></div>`;
 }
 
 function gateView() {
+  if (S.gate) { const n = S.gate.name; return `<div class="gate"><form class="gate-card" id="gate-form" autocomplete="off">
+    <div class="logo">🔒</div><h1>Planner</h1><p class="gate-sub">👤 ${esc(n.slice(0, 4) + '*'.repeat(Math.max(0, n.length - 4)))}</p>
+    <label class="gate-field"><span>🔑</span><input id="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="PIN" autocomplete="off"></label>
+    <label class="check"><input type="checkbox" id="remember" checked> Tetap masuk di perangkat ini</label>
+    <button class="gate-btn" type="submit">Masuk</button>
+    <div class="gate-err" id="gate-err" role="alert">${esc(S.gate.msg || '')}</div>
+    <p class="gate-note"><a href="#" data-a="gateback" style="color:#fff">← Ganti nama pengguna</a></p>
+  </form></div>`; }
   const adm = normUser($('#user-in')?.value) === ADMIN;
   return `<div class="gate"><form class="gate-card" id="gate-form" autocomplete="off">
     <div class="logo">✓</div><h1>Planner</h1><p class="gate-sub">To-do, kalender & catatan penting</p>
@@ -614,6 +643,10 @@ function openMenu() {
     <p class="muted small" style="margin:0">${syncText()} · versi ${BUILD}</p>
     <div class="fld"><span>Tampilan</span><div class="seg">${[['auto', 'Otomatis'], ['light', 'Terang'], ['dark', 'Gelap']].map(([v, l]) => `<label><input type="radio" name="theme" value="${v}"${theme === v ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div></div>
     ${S.admin ? '<p class="muted small" style="margin:0">Mode Admin hanya melihat: to-do dan catatan semua pengguna, diperbarui real time.</p>' : `<div class="fld"><span>Notifikasi pengingat</span>${np === 'granted' ? '<span class="small">✓ Aktif — notifikasi muncul saat Planner terbuka (tab atau aplikasi).</span>' : np === 'unsupported' ? '<span class="small muted">Browser ini tidak mendukung notifikasi; pengingat tampil di bagian atas halaman.</span>' : '<button class="btn" data-a="notif">🔔 Aktifkan notifikasi</button>'}</div>
+    <div class="fld"><span>🔒 PIN masuk</span><p class="small" style="margin:0">${S.hasPin ? '✓ PIN aktif — diminta setiap kali masuk, di semua perangkat.' : 'Belum ada PIN. Pasang PIN agar planner ini tidak bisa dibuka hanya dengan nama pengguna.'}</p>
+      ${S.hasPin ? '<input type="password" id="pin-old" inputmode="numeric" maxlength="12" placeholder="PIN saat ini" autocomplete="off">' : ''}
+      <div class="two"><input type="password" id="pin-new" inputmode="numeric" maxlength="12" placeholder="PIN baru (4–12 angka)" autocomplete="new-password"><input type="password" id="pin-new2" inputmode="numeric" maxlength="12" placeholder="Ulangi PIN baru" autocomplete="new-password"></div>
+      <div class="dlg-f" style="justify-content:flex-start"><button class="btn primary" data-a="pinsave">${S.hasPin ? 'Ubah PIN' : 'Pasang PIN'}</button>${S.hasPin ? '<button class="btn danger" data-a="pinoff">Hapus PIN</button>' : ''}<span class="small red" id="pin-msg" style="align-self:center;color:var(--high)"></span></div></div>
     <div class="fld"><span>Cadangan</span><div class="seg"><button class="btn" data-a="export">⬇ Ekspor JSON</button><label class="btn" style="text-align:center">⬆ Impor JSON<input type="file" id="imp" accept="application/json,.json" hidden></label></div></div>`}
     <div class="dlg-f"><button class="btn danger" data-a="logout">Keluar</button><span class="sp"></span><button class="btn primary" data-a="close">Tutup</button></div></div>`;
   dlg().showModal();
@@ -638,6 +671,18 @@ let toastT = null;
 function toast(msg) { let t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); } t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2500); }
 function applyTheme() { const t = LS.get('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
 
+async function pinChange(old, nw, out) {
+  out.textContent = 'Menyimpan…';
+  try {
+    const r = await rpc('pl_pin_set', { p_owner: S.user, p_old: old || S.pin || null, p_new: nw || null });
+    if (!r?.ok) { out.textContent = r?.pin === 'wrong' || r?.pin === 'need' ? 'PIN saat ini salah.' : PIN_MSG[r?.pin] || 'Gagal.'; return; }
+    S.pin = nw; S.hasPin = !!nw;
+    if (nw) { SS.set('pin.' + S.user, nw); LS.set('u.' + S.user + '.haspin', '1'); LS.set('u.' + S.user + '.pinhash', await pinHash(S.user, nw)); }
+    else { SS.del('pin.' + S.user); LS.del('u.' + S.user + '.haspin'); LS.del('u.' + S.user + '.pinhash'); }
+    ping(); openMenu(); toast(nw ? 'PIN tersimpan ✓ — berlaku di semua perangkat' : 'PIN dihapus.');
+  } catch (e) { out.textContent = 'Tidak bisa menghubungi server (' + e.message + ').'; }
+}
+
 // ---------- events ----------
 const A = {
   view: el => { S.view = el.dataset.v; window.scrollTo(0, 0); render(); },
@@ -660,6 +705,15 @@ const A = {
   subdel: el => { S.edit.subs.splice(Number(el.dataset.v), 1); drawSubs(); },
   ack: el => { const it = S.items.get(el.dataset.k); if (it) put({ ...it, data: { ...it.data, ack: remAt(it) } }); },
   snooze: el => { const it = S.items.get(el.dataset.k); if (!it) return; const d = new Date(Date.now() + 10 * 60e3); put({ ...it, data: { ...it.data, snooze: `${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}` } }); toast('Ditunda 10 menit.'); },
+  gateback: () => { S.gate = null; LS.del('session'); render(); },
+  pinsave: async () => {
+    const old = $('#pin-old')?.value || '', a = $('#pin-new').value, b = $('#pin-new2').value, out = $('#pin-msg');
+    if (!/^\d{4,12}$/.test(a)) { out.textContent = PIN_MSG.format; return; } if (a !== b) { out.textContent = 'Ulangi PIN tidak sama.'; return; }
+    await pinChange(old, a, out);
+  },
+  pinoff: async () => { const old = $('#pin-old').value, out = $('#pin-msg'); if (!old) { out.textContent = 'Isi PIN saat ini untuk menghapus PIN.'; return; } if (!confirm('Hapus PIN? Siapa pun yang tahu nama pengguna ini bisa membuka planner-nya.')) return; await pinChange(old, '', out); },
+  pinreset: async el => { const o = el.dataset.v; if (!confirm(`Hapus PIN milik "${o}"? Pengguna bisa masuk tanpa PIN lalu memasang PIN baru.`)) return;
+    try { const r = await rpc('pl_admin_pin_reset', { p_pass: S.pass, p_owner: o }); if (!r?.ok) return logout(); toast(`PIN ${o} dihapus.`); syncNow(); } catch (e) { alert('Gagal: ' + e.message); } },
   seeuser: el => { S.f.owner = el.dataset.v; S.view = 'todo'; render(); },
   notif: async () => { try { await Notification.requestPermission(); } catch {} openMenu(); },
   export: () => {
@@ -709,7 +763,11 @@ document.addEventListener('submit', ev => {
   if (f.id === 'qa-form') { const title = S.qa.title.trim(); if (!title) return; put(newItem('todo', { title, date: S.qa.date, time: '', prio: S.qa.prio, cat: '', repeat: 'none', notes: '', subs: [] })); S.qa.title = ''; render(); $('#qa-title')?.focus(); toast('To-do ditambahkan ✓'); return; }
   if (f.id === 'gate-form') {
     const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'Membuka…';
-    login($('#user-in').value, $('#pass-in').value, $('#remember').checked).then(render, e => { btn.disabled = false; btn.textContent = 'Masuk'; $('#gate-err').textContent = e.message; });
+    const pinMode = !!S.gate, name = pinMode ? S.gate.name : $('#user-in').value, pin = pinMode ? $('#pin-in').value : '';
+    if (pinMode && !pin) { btn.disabled = false; btn.textContent = 'Masuk'; $('#gate-err').textContent = PIN_MSG.need; return; }
+    login(name, pinMode ? '' : $('#pass-in').value, $('#remember').checked, pin).then(render, e => {
+      if (e.needPin && !pinMode) { S.gate = { name: normUser(name), msg: '' }; render(); return; }
+      btn.disabled = false; btn.textContent = 'Masuk'; $('#gate-err').textContent = e.message; const pi = $('#pin-in'); if (pi) { pi.value = ''; pi.focus(); } });
   }
 });
 dlg().addEventListener('close', () => { S.edit = null; render(); });
@@ -744,7 +802,9 @@ async function boot() {
     if (pass) { S.admin = true; S.pass = pass; loadCache(); S.view = 'todo'; render(); liveStart(); syncNow(); return; }
     LS.del('session'); // admin password is never stored on the device; ask again
   } else if (s?.user || ssUser) {
-    S.user = s?.user || ssUser; loadCache(); render(); liveStart(); rpc('pl_hello', { p_owner: S.user }).catch(() => {}); syncNow(); notifyCheck(); return;
+    const name = s?.user || ssUser, pin = SS.get('pin.' + name) || '';
+    if (LS.get('u.' + name + '.haspin') && !pin) { S.gate = { name, msg: '' }; render(); return; } // PIN asked on every new visit
+    S.user = name; S.pin = pin; S.hasPin = !!LS.get('u.' + name + '.haspin'); loadCache(); render(); liveStart(); syncNow(); notifyCheck(); return;
   }
   render();
 }
