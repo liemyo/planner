@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>/* phones + small tablets: whole app at 90% (layout widens to fill the screen); max-scale stops iOS zooming into inputs */
+if (Math.min(screen.width, screen.height) <= 820) document.querySelector('meta[name=viewport]').content = 'width=device-width, initial-scale=0.9, minimum-scale=0.9, maximum-scale=0.9, viewport-fit=cover';</script>
 <title>Planner</title>
 <meta name="description" content="Planner: to-do list dengan tanggal, sisa hari dan tingkat kepentingan, kalender rencana, dan catatan penting dengan pengingat — sinkron real time di HP dan laptop.">
 <meta name="theme-color" content="#4f5bd5">
@@ -47,6 +49,11 @@ main{max-width:1100px;margin:0 auto;padding:16px 16px 90px}
 .qa #qa-title{flex:1 1 220px}
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .filters input{flex:1 1 180px}
+.qa-wrap[hidden]{display:none}
+.hb-tog{margin:-4px 0 8px}
+.hb-tog .et{width:100%;height:22px;display:flex;align-items:center;gap:10px;background:none;border:0;padding:0;margin:0;color:var(--muted);font-size:17px;line-height:1;cursor:pointer}
+.hb-tog .et::before,.hb-tog .et::after{content:'';flex:1;height:1px;background:color-mix(in srgb,var(--text) 16%,transparent)}
+.hb-tog .et:hover{color:var(--acc)}.hb-tog .et:hover::before,.hb-tog .et:hover::after{background:var(--acc)}
 details.grp{margin-bottom:10px;overflow:hidden}
 details.grp>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:11px 14px;font-weight:700;user-select:none}
 details.grp>summary::-webkit-details-marker{display:none}
@@ -197,14 +204,19 @@ dialog::backdrop{background:rgba(10,12,20,.45)}
   .two{grid-template-columns:1fr}
   .toast{bottom:84px}
   /* compact quick-add / filters / groups (phone) — inputs stay 16px so iOS doesn't zoom */
-  .qa{display:grid;grid-template-columns:1.25fr 1fr minmax(70px,auto);gap:6px;padding:8px;margin-bottom:8px}
+  .qa{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:8px;margin-bottom:8px}
   .qa #qa-title{grid-column:1/3;grid-row:1}.qa .btn.primary{grid-column:3;grid-row:1;padding:0;font-size:20px}
   .qa #qa-date{grid-column:1;grid-row:2}.qa #qa-prio{grid-column:2;grid-row:2}.qa [data-a=newtodo]{grid-column:3;grid-row:2}
   .qa .lbl{display:none}
-  .qa input,.qa select,.qa .btn,.filters input,.filters select,.filters .btn{height:38px;padding:5px 8px;border-radius:9px;min-width:0;width:100%}
-  .qa .btn,.filters .btn{font-size:14px}
-  .filters{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
-  .filters .btn{grid-column:1/-1}
+  .qa input,.qa select,.qa .btn,.filters input,.filters select,.filters .btn{height:38px;min-height:0;padding:5px 8px;border-radius:9px;min-width:0;width:100%;max-width:100%;font-size:14px;box-sizing:border-box}
+  .qa #qa-date{-webkit-appearance:none;appearance:none;display:block;line-height:26px;text-align:center}
+  .qa #qa-date::-webkit-date-and-time-value{text-align:center;margin:0}
+  .qa #qa-date::-webkit-datetime-edit{padding:0}
+  .filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 8px 8px}
+  .filters input{grid-column:1/3}
+  .hb-tog{margin:-2px 0 8px}
+  .hb-tog .et{height:28px;font-size:19px}
+  .filters .btn,.filters #f-cat{grid-column:1/-1}
   details.grp{margin-bottom:6px;border-radius:12px}
   details.grp>summary{padding:8px 12px;font-size:14.5px;gap:6px}
   details.grp>summary::after{font-size:17px}
@@ -221,7 +233,7 @@ dialog::backdrop{background:rgba(10,12,20,.45)}
 <dialog id="dlg"></dialog>
 <noscript>Planner memerlukan JavaScript.</noscript>
 <script>// Planner — to-do, kalender, catatan penting. Data per nama pengguna di Supabase (proyek saku-yuk), sinkron real time.
-const BUILD = '20261003-212819';
+const BUILD = '20261003-222858';
 const SB_URL = 'https://bbptcxpzzvgpxqylkrmw.supabase.co', SB_KEY = 'sb_publishable_Ny-WHCEZ3WmcLFsPBx9QeQ_9xgo7MxR'; // public key; tables closed, only pl_* functions
 const ADMIN = 'admin';
 
@@ -498,14 +510,15 @@ function todoView() {
   const stat = (g, l) => `<button class="stat ${g} ${S.f.stat === g ? 'sel' : ''}" data-a="stat" data-v="${g}"><b>${cnt(g)}</b><span>${l}</span></button>`;
   return `<div class="head"><div><div class="muted small">${longD(now)} · <span id="clock">${pad(now.getHours())}:${pad(now.getMinutes())}</span></div><h1>${S.admin ? 'Semua to-do pengguna' : 'To-do list'}</h1></div>${ownerFilter()}</div>
     <div class="stats">${stat('late', 'Terlambat')}${stat('today', 'Hari ini')}${stat('week', '7 hari ke depan')}${stat('done', 'Selesai')}</div>
-    ${RO() ? '' : `<form class="card qa" id="qa-form" autocomplete="off"><input id="qa-title" placeholder="Tambah to-do… (Enter)" value="${esc(S.qa.title)}" maxlength="200">
+    <div class="qa-wrap"${LS.get('qa') === 'hide' ? ' hidden' : ''}>${RO() ? '' : `<form class="card qa" id="qa-form" autocomplete="off"><input id="qa-title" placeholder="Tambah to-do… (Enter)" value="${esc(S.qa.title)}" maxlength="200">
       <input id="qa-date" type="date" value="${esc(S.qa.date)}" title="Tanggal">
       <select id="qa-prio" title="Kepentingan">${Object.entries(PRIO).map(([k, [l]]) => `<option value="${k}"${S.qa.prio === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
       <button class="btn primary" type="submit" title="Tambah">＋<span class="lbl"> Tambah</span></button><button class="btn" type="button" data-a="newtodo">Detail…</button></form>`}
     <div class="filters"><input id="f-q" data-f="q" type="search" placeholder="🔍 Cari to-do…" value="${esc(S.f.q)}">
       <select id="f-prio" data-f="prio"><option value="">Kepentingan</option>${Object.entries(PRIO).map(([k, [l]]) => `<option value="${k}"${S.f.prio === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
       ${cats.length ? `<select id="f-cat" data-f="cat"><option value="">Semua kategori</option>${cats.map(c => `<option${S.f.cat === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>` : ''}
-      ${S.f.stat || S.f.q || S.f.prio || S.f.cat ? '<button class="btn" data-a="clearf">Reset filter</button>' : ''}</div>
+      ${S.f.stat || S.f.q || S.f.prio || S.f.cat ? '<button class="btn" data-a="clearf">Reset filter</button>' : ''}</div></div>
+    <div class="hb-tog"><button type="button" class="et" data-a="qatog" aria-expanded="${LS.get('qa') !== 'hide'}" title="${LS.get('qa') === 'hide' ? 'Tampilkan tambah & cari' : 'Sembunyikan tambah & cari'}">${LS.get('qa') === 'hide' ? '⌄' : '⌃'}</button></div>
     ${groups.map(([g, label, ic]) => {
       const rows = list.filter(t => groupOf(t) === g).sort(g === 'done' ? (a, b) => (b.data.doneAt || 0) - (a.data.doneAt || 0) : byDate);
       if (!rows.length && (g === 'done' || g === 'nodate' || g === 'later')) return '';
@@ -706,6 +719,10 @@ const A = {
   close: () => dlg().close(),
   logout: () => logout(),
   stat: el => { S.f.stat = S.f.stat === el.dataset.v ? '' : el.dataset.v; render(); },
+  qatog: el => { // hide / show quick-add + search (remembered per device)
+    const hide = LS.get('qa') !== 'hide'; hide ? LS.set('qa', 'hide') : LS.del('qa');
+    $('.qa-wrap').hidden = hide; el.textContent = hide ? '⌄' : '⌃'; el.title = hide ? 'Tampilkan tambah & cari' : 'Sembunyikan tambah & cari'; el.setAttribute('aria-expanded', String(!hide));
+  },
   clearf: () => { S.f.q = S.f.prio = S.f.cat = S.f.stat = ''; render(); },
   toggle: el => toggleTodo(el.dataset.k),
   edit: el => { const it = S.items.get(el.dataset.k); if (!it) return; it.kind === 'todo' ? openTodo(it) : openNote(it); },
